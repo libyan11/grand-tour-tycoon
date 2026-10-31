@@ -412,6 +412,29 @@ body{font-size:16px}
 .bill{font-size:12.5px}
 h2{font-size:18px}
 @media (max-width:560px){.prompt{font-size:14px}.btn{font-size:14px}.btn.big{font-size:15px}.status{font-size:16px}}
+
+/* ---------- Clearer info, navigation and trading ---------- */
+.mini{gap:5px}
+.mg{display:inline-flex;gap:2px;padding:2px;border-radius:4px}
+.mg.full{outline:2px solid var(--ink);outline-offset:0}
+.prow .row.pact{margin-top:7px;gap:6px}
+.pgroup{display:flex;flex-direction:column;gap:5px}
+.pgroup+.pgroup{margin-top:12px}
+.pghead{display:flex;align-items:center;gap:7px;font-weight:800;font-size:14.5px}
+.pghead .fine{font-weight:600}
+.pghead.full .fine{color:var(--money);font-weight:800}
+.tag{display:inline-block;margin-left:6px;font-size:11.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--accent);color:var(--accent-ink)}
+.quick{gap:5px;margin-top:-2px}
+.quick .btn{padding:4px 9px;font-size:13px}
+.tsum{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;background:var(--cell);border:2px solid var(--line);border-radius:12px;padding:10px 12px}
+.tsum > div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.tsum b{font-size:15px;overflow-wrap:anywhere}
+.tsum .arrow{font-size:22px;color:var(--muted)}
+.tsum .warn{color:var(--danger);font-weight:700;font-size:13px}
+.trade .val{font-size:12.5px;color:var(--muted)}
+.layout{grid-template-columns:minmax(0,1fr) 400px}
+.board-wrap{width:min(100%,calc(100vh - 80px))}
+@media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -1104,6 +1127,10 @@ function onState(s){
       if(prev.status==='playing' && s.status==='ended'){ Sfx.play('win'); confetti(); }
     }
     moneyBubbles(prev,s);
+    if(prev && prev.code===s.code && !s.local){
+      const seen=new Set((prev.trades||[]).map(x=>x.id));
+      for(const tr of s.trades||[]) if(!seen.has(tr.id) && tr.to===app.myId){ toast(`${byId(s,tr.from)?.name||'Someone'} sent you a trade offer. Open the Trades tab.`); Sfx.play('turn'); }
+    }
     scheduleAuction(s);
   }
   if(s && s.local && s.status==='lobby') ui.control=null;
@@ -1138,6 +1165,7 @@ async function act(name,...args){
     const actor=actorId();
     if(app.game.action) await app.game.action(name,args);
     else await app.game.mutate(s=>{ if(!s) fail('This game no longer exists.'); const r=A[name](s,actor,...args); return r===false?false:s; });
+    return true;
   }catch(e){
     if(!opts.quiet){
       if(e && e.code==='permission-denied') toast('The game server refused that move. Reload the page and try again.');
@@ -1291,6 +1319,7 @@ function cornerHTML(s,i){
   if(i===20) return `<div class="corner c-park"><div class="rot"><b>FREE</b><span class="cicon">${ICON.car}</span><b>PARKING</b>${s && s.settings?.vacationCash?`<span class="pot">${money(s.pot||0)}</span>`:''}</div></div>`;
   return `<div class="corner c-gtj"><div class="rot"><b>GO TO</b><span class="cicon">${ICON.cop}</span><b>JAIL</b></div></div>`;
 }
+function rentNow(s,pos){ const sp=SPACES[pos]; if(sp.t==='util') return countType(s,s.owned[pos].owner,'util')===2?'10\u00d7 dice':'4\u00d7 dice'; return money(rentFor(s,pos,0)); }
 function cellHTML(s,i){
   const sp=SPACES[i], [r,c]=cellRC(i), sd=sideOf(i);
   const o=s?.owned?.[i], ow=o && byId(s,o.owner);
@@ -1303,8 +1332,10 @@ function cellHTML(s,i){
     const foot= ow?`<div class="ownbar" style="background:${ow.color}">${ow.token}</div>` : sp.p?`<div class="price">${money(sp.p)}</div>` : '';
     inner=`<div class="ci" style="--rot:${ROT[sd]}">${band}<div class="nm">${esc(sp.n)}</div>${icon}${sub}<span class="gap"></span>${foot}</div>`;
   }
-  const label=`${sp.n}${sp.p?', '+money(sp.p):''}${ow?', owned by '+ow.name:''}${o?.mortgaged?', mortgaged':''}${o&&o.houses?`, ${o.houses===5?'hotel':o.houses+' houses'}`:''}`;
-  return `<button class="cell s-${sd}${o?.mortgaged?' mort':''}${ow?' owned':''}" style="grid-row:${r};grid-column:${c};${ow?`--own:${ow.color}`:''}" data-act="deed" data-pos="${i}" aria-label="${esc(label)}">${inner}</button>`;
+  let label=sp.n.replace(/\u00AD/g,'');
+  if(BUYABLE(sp.t)) label+= ow ? ` \u2014 owned by ${ow.name}${o.mortgaged?' (mortgaged)':''}${o.houses?`, ${o.houses===5?'hotel':o.houses+' house'+(o.houses>1?'s':'')}`:''}${s.status==='playing'&&!o.mortgaged?` \u00b7 rent now ${rentNow(s,i)}`:''}` : ` \u2014 for sale, ${money(sp.p)}`;
+  label+=' \u00b7 tap for details';
+  return `<button class="cell s-${sd}${o?.mortgaged?' mort':''}${ow?' owned':''}" style="grid-row:${r};grid-column:${c};${ow?`--own:${ow.color}`:''}" data-act="deed" data-pos="${i}" title="${esc(label)}" aria-label="${esc(label)}">${inner}</button>`;
 }
 function cardPopHTML(s){
   const c=ui.cardPop, card=CARDS[c.id], p=byId(s,c.who), ch=c.deck==='chance';
@@ -1386,9 +1417,14 @@ function playersHTML(s){
     if(p.debts.length) b.push(`<span class="badge bad">Owes ${money(debtTotal(p))}</span>`); if(p.bankrupt) b.push('<span class="badge bad">Bankrupt</span>');
     if(p.jailCards.length) b.push(`<span class="badge">${p.jailCards.length} jail card${p.jailCards.length>1?'s':''}</span>`);
     const props=ownedBy(s,p.id);
-    const mini=props.length?`<div class="mini">${props.map(i=>`<i class="${s.owned[i].mortgaged?'m':''}" style="background:${SPACES[i].g?GC[SPACES[i].g]:'#7d8a84'}" title="${esc(SPACES[i].n)}"></i>`).join('')}</div>`:'';
+    const chips=list=>list.map(i=>`<i class="${s.owned[i].mortgaged?'m':''}" style="background:${SPACES[i].g?GC[SPACES[i].g]:'#7d8a84'}"></i>`).join('');
+    const sets=Object.keys(GROUPS).map(g=>{ const have=GROUPS[g].filter(i=>s.owned[i]?.owner===p.id); if(!have.length) return ''; const full=have.length===GROUPS[g].length;
+      return `<span class="mg${full?' full':''}" title="${GN[g]}: ${have.length} of ${GROUPS[g].length}${full?' (complete set)':''}">${chips(have)}</span>`; }).join('');
+    const misc=props.filter(i=>!SPACES[i].g);
+    const mini=props.length?`<div class="mini">${sets}${misc.length?`<span class="mg" title="Railroads and utilities">${chips(misc)}</span>`:''}</div>`:'';
+    const meNow=meP(s), tradeBtn=s.status==='playing' && meNow && !meNow.bankrupt && !p.bankrupt && p.id!==meNow.id ? B('tradeWith','Trade','sm',`data-id="${esc(p.id)}"`) : '';
     const host=isHost(s,actorId()) && !s.local && s.status==='playing' && !p.bankrupt && p.id!==actorId() ? confirmBtn('rm'+p.id,'remove','Remove','ghost sm',`data-id="${esc(p.id)}"`) : '';
-    return `<div class="prow${p.id===now?' turn':''}${p.bankrupt?' out':''}">${tokenHTML(p,'lg')}<div style="min-width:0"><div class="pname">${esc(p.name)}</div><div class="badges">${b.join('')}</div>${mini}${p.id===actorId()&&!p.bankrupt?billsHTML(p.cash):''}${host?`<div style="margin-top:5px">${host}</div>`:''}</div>
+    return `<div class="prow${p.id===now?' turn':''}${p.bankrupt?' out':''}">${tokenHTML(p,'lg')}<div style="min-width:0"><div class="pname">${esc(p.name)}</div><div class="badges">${b.join('')}</div>${mini}${p.id===actorId()&&!p.bankrupt?billsHTML(p.cash):''}${host||tradeBtn?`<div class="row pact">${tradeBtn}${host}</div>`:''}</div>
       <div class="cash">${p.bankrupt?'—':money(p.cash)}<small>${p.bankrupt?'':`worth ${money(netWorth(s,p))}`}</small></div></div>`;
   }).join('')}</div></div>`;
 }
@@ -1402,9 +1438,12 @@ function propsTab(s,me){
   if(!me) return '<p class="fine">Join a game to own property. Tap any space on the board to see its Title Deed card.</p>';
   const mine=ownedBy(s,me.id);
   if(!mine.length) return '<p class="fine">No property yet. Land on a space that’s for sale and buy it. Tap any space on the board to see its Title Deed card.</p>';
-  return `<div class="deeds">${mine.map(i=>{ const sp=SPACES[i],o=s.owned[i];
-    return `<button class="deed-row" data-act="deed" data-pos="${i}"><span class="swatch" style="background:${sp.g?GC[sp.g]:'transparent'};${sp.g?'':'border:0'}"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">${sp.g?'':`<span class="ico-s">${ICON[sp.ic]}</span> `}${esc(sp.n)}</span><span class="st">${stateLabel(o)} ${sp.g&&ownsSet(s,me.id,sp.g)?'· Set':''}</span></button>`; }).join('')}</div>
-    <p class="fine" style="margin-top:8px">Tap a property to see its Title Deed card and build, sell or mortgage.</p>`;
+  const row=i=>{ const sp=SPACES[i],o=s.owned[i];
+    return `<button class="deed-row" data-act="deed" data-pos="${i}"><span class="swatch" style="background:${sp.g?GC[sp.g]:'transparent'};${sp.g?'':'border:0'}"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">${sp.g?'':`<span class="ico-s">${ICON[sp.ic]}</span> `}${esc(sp.n)}</span><span class="st">${[stateLabel(o),o.mortgaged?'':'rent '+rentNow(s,i)].filter(Boolean).join(' · ')}</span></button>`; };
+  const sections=[...Object.keys(GROUPS).map(g=>({g,label:GN[g],list:GROUPS[g]})),{g:null,label:'Railroads',list:[5,15,25,35]},{g:null,label:'Utilities',list:[12,28]}];
+  return sections.map(sec=>{ const have=sec.list.filter(i=>s.owned[i]?.owner===me.id); if(!have.length) return ''; const full=have.length===sec.list.length;
+      return `<div class="pgroup"><div class="pghead${full?' full':''}">${sec.g?`<span class="swatch" style="background:${GC[sec.g]}"></span>`:''}${sec.label} <span class="fine">${have.length} of ${sec.list.length}${full&&sec.g?' · complete set, you can build':full?' · all owned':''}</span></div><div class="deeds">${have.map(row).join('')}</div></div>`; }).join('')
+    +'<p class="fine" style="margin-top:10px">Tap a property to see its Title Deed card and build, sell, mortgage or trade it.</p>';
 }
 function sideSummary(s,side){
   const parts=[]; if(side.cash) parts.push(`<li class="mono">${money(side.cash)}</li>`);
@@ -1418,8 +1457,8 @@ function tradesTab(s,me){
   const others=s.trades.filter(t=>!mine.includes(t));
   const card=t=>{ const a=byId(s,t.from),b=byId(s,t.to); const incoming=me&&t.to===me.id;
     return `<div class="trade"><div><b>${esc(a.name)}</b> → <b>${esc(b.name)}</b>${incoming?' <span class="badge hot">For you</span>':''}</div>
-      <div class="cols"><div><div class="eyebrow">${esc(a.name)} gives</div>${sideSummary(s,t.give)}</div><div><div class="eyebrow">${esc(b.name)} gives</div>${sideSummary(s,t.get)}</div></div>
-      ${incoming?`<div class="row">${B('acceptTrade','Accept','primary sm',`data-id="${t.id}"`)}${B('declineTrade','Decline','sm',`data-id="${t.id}"`)}</div>`:me&&t.from===me.id?`<div class="row">${B('declineTrade','Withdraw','ghost sm',`data-id="${t.id}"`)}</div>`:''}</div>`; };
+      <div class="cols"><div><div class="eyebrow">${esc(a.name)} gives</div>${sideSummary(s,t.give)}<div class="val">Value ${money(tradeValue(s,t.give))}</div></div><div><div class="eyebrow">${esc(b.name)} gives</div>${sideSummary(s,t.get)}<div class="val">Value ${money(tradeValue(s,t.get))}</div></div></div>
+      ${incoming?`<div class="row">${B('acceptTrade','Accept','primary sm',`data-id="${t.id}"`)}${B('counterTrade','Counter-offer','sm',`data-id="${t.id}"`)}${B('declineTrade','Decline','ghost sm',`data-id="${t.id}"`)}</div>`:me&&t.from===me.id?`<div class="row">${B('declineTrade','Withdraw','ghost sm',`data-id="${t.id}"`)}</div>`:''}</div>`; };
   return `<div class="stack">${canTrade?B('tradeNew','Propose a trade','primary'):''}
     ${mine.map(card).join('')}${others.length?`<div class="eyebrow">Between other players</div>${others.map(card).join('')}`:''}
     ${!s.trades.length?'<p class="fine">No open trades. Swap properties, cash and jail cards with anyone, at any time.</p>':''}</div>`;
@@ -1604,7 +1643,7 @@ function deedModal(s,pos){
       <p class="dc${n===2?' dline now':''}" style="display:block;margin-top:6px">If both utilities are owned, rent is <b>10 times</b> the amount shown on the dice.</p>
       <div class="dsep"></div><div class="dc">Mortgage Value $75</div>`;
   }
-  const ownerLine=`<div class="row" style="justify-content:space-between"><span class="fine">${ow?`Owned by <b style="color:var(--ink)">${esc(ow.name)}</b>`:`For sale · ${money(sp.p)}`}</span>${o?`<span class="badge${o.mortgaged?' bad':''}">${stateLabel(o)||'No buildings'}</span>`:''}</div>`;
+  const ownerLine=`<div class="row" style="justify-content:space-between"><span class="fine">${ow?`Owned by <b style="color:var(--ink)">${esc(ow.name)}</b>${s.status==='playing'&&!o.mortgaged?` \u00b7 rent now <b style="color:var(--ink)">${rentNow(s,pos)}</b>`:''}`:`For sale \u00b7 ${money(sp.p)}`}</span>${o?`<span class="badge${o.mortgaged?' bad':''}">${stateLabel(o)||'No buildings'}</span>`:''}</div>`;
   let tools='';
   if(mine){
     const br=sp.t==='street'?buildReason(s,me.id,pos):null, sr=sp.t==='street'?sellReason(s,me.id,pos):null, mr=mortReason(s,me.id,pos), ur=unmortReason(s,me.id,pos);
@@ -1615,23 +1654,46 @@ function deedModal(s,pos){
     const why=[br&&sp.t==='street'&&o.houses<5?'Build: '+br:'', o.mortgaged?(ur?'Unmortgage: '+ur:''):(mr?'Mortgage: '+mr:'')].filter(Boolean);
     tools=`<div class="row">${btns.join('')}</div>${why.length?`<div class="fine">${why.map(esc).join('<br>')}</div>`:''}`;
   }
+  let trade='';
+  if(s && s.status==='playing' && me && !me.bankrupt && o && ow && !ow.bankrupt){
+    const blk=tradeBlock(s,pos);
+    trade=o.owner!==me.id ? B('tradeFor',`Ask ${esc(ow.name)} to trade it`,'primary sm',`data-pos="${pos}"`,!!blk) : B('tradeOffer','Offer it in a trade','sm',`data-pos="${pos}"`,!!blk);
+    if(blk) trade+=`<span class="fine">Can\u2019t trade yet: its color set has buildings.</span>`;
+  }
   return `<div class="sheet deed"><div class="deedcard">${head}<div class="dbody">${body}</div></div>
-    <div class="deedtools">${ownerLine}${tools}<div class="row" style="justify-content:flex-end">${B('closeModal','Close','ghost sm')}</div></div></div>`;
+    <div class="deedtools">${ownerLine}${tools}${trade?`<div class="row">${trade}</div>`:''}<div class="row" style="justify-content:space-between">${B('deedNav','\u2039 Previous','ghost sm','data-dir="-1"')}${B('closeModal','Close','ghost sm')}${B('deedNav','Next \u203a','ghost sm','data-dir="1"')}</div></div></div>`;
 }
+function tradeValue(s,side){ return (side.cash||0)+side.props.reduce((n,i)=>n+(s.owned[i]?.mortgaged?SPACES[i].p/2:SPACES[i].p),0); }
+// Color sets a player would complete by receiving these properties.
+function completesSet(s,id,props){ const got=new Set(props); return [...new Set(props.map(i=>SPACES[i].g).filter(Boolean))].filter(g=>GROUPS[g].every(i=>s.owned[i]?.owner===id||got.has(i))); }
+function sideText(side){ const parts=[]; if(side.cash) parts.push(money(side.cash)); side.props.forEach(i=>parts.push(SPACES[i].n.replace(/­/g,''))); if(side.cards) parts.push(`${side.cards} jail card${side.cards>1?'s':''}`); return parts.join(', ')||'Nothing'; }
 function tradeModal(s){
   const me=meP(s), t=ui.modal.t; const others=activeP(s).filter(p=>p.id!==me.id);
   const them=t.to&&byId(s,t.to);
-  const pickList=(p,sel,key)=>{ const props=ownedBy(s,p.id); if(!props.length) return '<p class="fine">No properties.</p>';
-    return `<div class="picks">${props.map(i=>{ const blk=tradeBlock(s,i); return `<label class="pick${blk?' dis':''}"><input type="checkbox" data-act="tpick" data-key="${key}" data-pos="${i}" ${sel.includes(i)?'checked':''} ${blk?'disabled':''}>
-      ${SPACES[i].g?`<span class="swatch" style="background:${GC[SPACES[i].g]}"></span>`:`<span class="ico-s">${ICON[SPACES[i].ic]}</span>`} <span>${esc(SPACES[i].n)}${s.owned[i].mortgaged?' <span class="fine">(mortgaged)</span>':''}${blk?` <span class="fine">· ${blk}</span>`:''}</span></label>`; }).join('')}</div>`; };
-  const col=(p,side,key,label)=>`<div class="stack"><div class="eyebrow">${label}</div>
+  const pickList=(p,side,key,receiver)=>{ const props=ownedBy(s,p.id); if(!props.length) return '<p class="fine">No properties.</p>';
+    const done=receiver?completesSet(s,receiver.id,side.props):[];
+    return `<div class="picks">${props.map(i=>{ const blk=tradeBlock(s,i), g=SPACES[i].g; const tag=side.props.includes(i)&&g&&done.includes(g)?`<span class="tag">${key==='get'?'completes your set':'completes their set'}</span>`:'';
+      return `<label class="pick${blk?' dis':''}"><input type="checkbox" data-act="tpick" data-key="${key}" data-pos="${i}" ${side.props.includes(i)?'checked':''} ${blk?'disabled':''}>
+      ${g?`<span class="swatch" style="background:${GC[g]}"></span>`:`<span class="ico-s">${ICON[SPACES[i].ic]}</span>`} <span>${esc(SPACES[i].n)} <span class="fine">${money(SPACES[i].p)}</span>${s.owned[i].mortgaged?' <span class="fine">(mortgaged)</span>':''}${blk?` <span class="fine">· ${blk}</span>`:''}${tag}</span></label>`; }).join('')}</div>`; };
+  const quick=key=>`<div class="row quick">${[10,50,100].map(n=>`<button type="button" class="btn sm ghost" data-act="tcashAdd" data-key="${key}" data-amt="${n}">+$${n}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="tcashAdd" data-key="${key}" data-amt="0">Clear</button></div>`;
+  const col=(p,side,key,label,receiver)=>`<div class="stack"><div class="eyebrow">${label}</div>
     <label class="field" for="tc-${key}">Cash (has ${money(p.cash)})<input type="number" id="tc-${key}" min="0" max="${p.cash}" step="10" data-tcash="${key}" value="${side.cash||''}" placeholder="0"></label>
-    ${pickList(p,side.props,key)}
-    ${p.jailCards.length?`<label class="field" for="tj-${key}">Jail cards (has ${p.jailCards.length})<input type="number" id="tj-${key}" min="0" max="${p.jailCards.length}" data-tcards="${key}" value="${side.cards||''}" placeholder="0"></label>`:''}</div>`;
-  return `<div class="sheet wide"><div class="hd"><div><div class="eyebrow">New trade</div><h2>Trade with${them?' '+esc(them.name):'…'}</h2></div>${B('closeModal','Close','ghost sm')}</div><div class="bd">
+    ${quick(key)}
+    ${pickList(p,side,key,receiver)}
+    ${p.jailCards.length?`<label class="field" for="tj-${key}">Get Out of Jail Free cards (has ${p.jailCards.length})<input type="number" id="tj-${key}" min="0" max="${p.jailCards.length}" data-tcards="${key}" value="${side.cards||''}" placeholder="0"></label>`:''}</div>`;
+  const you=isLocal()?esc(me.name):'You', youGive=isLocal()?`${esc(me.name)} gives`:'You give';
+  let summary='', canSend=false;
+  if(them){
+    const warn=[]; if(t.give.cash>me.cash) warn.push(`${you} only ${isLocal()?'has':'have'} ${money(me.cash)}.`); if(t.get.cash>them.cash) warn.push(`${esc(them.name)} only has ${money(them.cash)}.`);
+    const empty=!t.give.cash&&!t.get.cash&&!t.give.props.length&&!t.get.props.length&&!t.give.cards&&!t.get.cards;
+    canSend=!empty&&!warn.length;
+    summary=`<div class="tsum"><div><span class="eyebrow">${youGive}</span><b>${esc(sideText(t.give))}</b><span class="fine">Value ${money(tradeValue(s,t.give))}</span></div><div class="arrow" aria-hidden="true">⇄</div><div><span class="eyebrow">${esc(them.name)} gives</span><b>${esc(sideText(t.get))}</b><span class="fine">Value ${money(tradeValue(s,t.get))}</span></div></div>
+      ${warn.length?`<div class="tsum" style="grid-template-columns:1fr"><span class="warn">${warn.join(' ')}</span></div>`:''}`;
+  }
+  return `<div class="sheet wide"><div class="hd"><div><div class="eyebrow">${t.counterOf?'Counter-offer':'New trade'}</div><h2>Trade with${them?' '+esc(them.name):'…'}</h2></div>${B('closeModal','Close','ghost sm')}</div><div class="bd">
     <div class="row">${others.map(p=>`<button class="btn sm ${t.to===p.id?'primary':'ghost'}" data-act="tto" data-id="${esc(p.id)}">${p.token} ${esc(p.name)}</button>`).join('')}</div>
-    ${them?`<div class="tcols">${col(me,t.give,'give',`${isLocal()?esc(me.name)+' gives':'You give'}`)}${col(them,t.get,'get',`${esc(them.name)} gives`)}</div>
-    <div class="row" style="justify-content:flex-end">${B('closeModal','Cancel','ghost')}${B('tradeSend','Send offer','primary')}</div>`:'<p class="fine">Pick a player to trade with.</p>'}</div></div>`;
+    ${them?`${summary}<div class="tcols">${col(me,t.give,'give',`${youGive}`,them)}${col(them,t.get,'get',`${esc(them.name)} gives`,me)}</div>
+    <div class="row" style="justify-content:flex-end">${B('closeModal','Cancel','ghost')}${B('tradeSend',t.counterOf?'Send counter-offer':'Send offer','primary','',!canSend)}</div>`:'<p class="fine">Pick a player to trade with.</p>'}</div></div>`;
 }
 function rulesModal(s){
   const st=s?.settings||DEFAULTS;
@@ -1663,6 +1725,7 @@ function renderModal(){
 function toast(msg){ const el=document.createElement('div'); el.className='toast'; el.textContent=msg; $('#toasts').appendChild(el); setTimeout(()=>el.remove(),4200); }
 
 /* ================= Events ================= */
+function openTrade(o){ ui.modal={type:'trade',t:{to:o.to||null,give:{cash:o.giveCash||0,props:o.give||[],cards:o.giveCards||0},get:{cash:o.getCash||0,props:o.get||[],cards:o.getCards||0},counterOf:o.counterOf||null}}; renderModal(); }
 async function createGame(){
   const name=ui.name.trim(); if(!name){ toast('Enter your name first.'); $('#nameInput')?.focus(); return; }
   const code=genCode(), s=newLobby(code,app.myId,false);
@@ -1683,14 +1746,14 @@ document.addEventListener('input',e=>{
     ui.joinCode=(m?m[1]:t.value).toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4); t.value=ui.joinCode;
     if(m && ui.joinCode.length===4) clickAct('joinCode');
   } else if(t.dataset.bind){ ui[t.dataset.bind]=t.value; if(t.dataset.bind==='name') lsSet('gtt:name',t.value); }
-  if(t.dataset.tcash){ ui.modal.t[t.dataset.tcash].cash=Math.max(0,Math.floor(+t.value||0)); }
-  if(t.dataset.tcards){ ui.modal.t[t.dataset.tcards].cards=Math.max(0,Math.floor(+t.value||0)); }
+  if(t.dataset.tcash){ ui.modal.t[t.dataset.tcash].cash=Math.max(0,Math.floor(+t.value||0)); render(); }
+  if(t.dataset.tcards){ ui.modal.t[t.dataset.tcards].cards=Math.max(0,Math.floor(+t.value||0)); render(); }
 });
 document.addEventListener('change',e=>{
   const t=e.target, a=t.dataset.act;
   if(a==='control'){ ui.control=t.value; render(); }
   else if(a==='setNum') act('setting',t.dataset.key,+t.value);
-  else if(a==='tpick'){ const side=ui.modal.t[t.dataset.key], pos=+t.dataset.pos; side.props=t.checked?[...side.props,pos]:side.props.filter(x=>x!==pos); }
+  else if(a==='tpick'){ const side=ui.modal.t[t.dataset.key], pos=+t.dataset.pos; side.props=t.checked?[...side.props,pos]:side.props.filter(x=>x!==pos); render(); }
 });
 document.addEventListener('submit',e=>{
   if(e.target.id!=='chatForm') return; e.preventDefault();
@@ -1700,6 +1763,7 @@ document.addEventListener('submit',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && ui.modal){ ui.modal=null; renderModal(); }
+  if(ui.modal?.type==='deed' && (e.key==='ArrowRight'||e.key==='ArrowLeft')){ e.preventDefault(); clickAct('deedNav',{dataset:{dir:e.key==='ArrowRight'?'1':'-1'}}); }
   if(e.key==='Enter' && e.target.id==='codeInput'){ e.preventDefault(); clickAct('joinCode'); }
   if(e.key==='Enter' && e.target.id==='localName'){ e.preventDefault(); clickAct('addLocal'); }
 });
@@ -1742,9 +1806,16 @@ function clickAct(a,el={dataset:{}}){
     case 'closeModal': ui.modal=null; renderModal(); break;
     case 'rules': ui.modal={type:'rules'}; renderModal(); break;
     case 'tab': ui.tab=d.tab; render(); break;
-    case 'tradeNew': ui.modal={type:'trade',t:{to:null,give:{cash:0,props:[],cards:0},get:{cash:0,props:[],cards:0}}}; renderModal(); break;
-    case 'tto': ui.modal.t={to:d.id,give:{cash:0,props:[],cards:0},get:{cash:0,props:[],cards:0}}; renderModal(); break;
-    case 'tradeSend': { const t=ui.modal.t; ui.modal=null; renderModal(); act('offer',clone(t)).then(()=>{ ui.tab='trades'; render(); }); break; }
+    case 'tradeNew': openTrade({}); break;
+    case 'tradeWith': openTrade({to:d.id}); break;
+    case 'tradeFor': { const o=s.owned[+d.pos]; if(o) openTrade({to:o.owner,get:[+d.pos]}); break; }
+    case 'tradeOffer': openTrade({give:[+d.pos]}); break;
+    case 'counterTrade': { const tr=s.trades.find(x=>x.id===d.id); if(tr) openTrade({to:tr.from,give:tr.get.props.slice(),get:tr.give.props.slice(),giveCash:tr.get.cash,getCash:tr.give.cash,giveCards:tr.get.cards,getCards:tr.give.cards,counterOf:tr.id}); break; }
+    case 'tto': ui.modal.t.to=d.id; ui.modal.t.get={cash:0,props:[],cards:0}; renderModal(); break;
+    case 'tcashAdd': { const side=ui.modal.t[d.key]; side.cash=+d.amt?(side.cash||0)+(+d.amt):0; render(); break; }
+    case 'tradeSend': { const t=ui.modal.t, counter=t.counterOf; ui.modal=null; renderModal();
+      act('offer',{to:t.to,give:t.give,get:t.get}).then(ok=>{ if(ok && counter && app.s && app.s.trades.some(x=>x.id===counter)) return act('declineTrade',counter); }).then(()=>{ ui.tab='trades'; render(); }); break; }
+    case 'deedNav': { let pos=ui.modal.pos; do{ pos=(pos+(+d.dir)+40)%40; }while(!BUYABLE(SPACES[pos].t)); ui.modal.pos=pos; renderModal(); break; }
     case 'acceptTrade': case 'declineTrade': act(a,d.id); break;
     case 'invite': ui.modal={type:'invite'}; renderModal(); break;
     case 'tilt': ui.tilt=!ui.tilt; lsSet('gtt:tilt',ui.tilt?'on':'off'); render(); break;
