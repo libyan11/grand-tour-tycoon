@@ -1314,11 +1314,11 @@ function centerHTML(s){
   } else if(s.pending?.type==='auction'){
     const a=s.pending, sp=SPACES[a.pos], hb=a.bidder&&byId(s,a.bidder);
     const canBid=me && !me.bankrupt && !a.passed.includes(me.id) && a.bidder!==me.id;
-    const inc=[10,50,100].map(n=>B('bid',`+$${n}`,'sm','data-amt="'+(a.high+n)+'"',!canBid || me.cash<a.high+n)).join('');
+    const inc=[1,10,50,100].map(n=>B('bid',`+$${n}`,'sm','data-amt="'+(a.high+n)+'"',!canBid || me.cash<a.high+n)).join('');
     main=`<div class="auction"><div class="eyebrow">Auction${sp.g?` · <span class="swatch" style="background:${GC[sp.g]}"></span> ${GN[sp.g]}`:''}</div>
       <div style="font-weight:800">${esc(sp.n)} <span class="muted mono">(list ${money(sp.p)})</span></div>
       <div class="hi">${a.high?money(a.high):'No bids'}</div>
-      <div class="fine">${hb?`Top bid: ${esc(hb.name)}${hb.id===me?.id?' (you)':''}`:'Bids start at $10'} · <span class="timer" id="auctionTimer">${Math.max(0,Math.ceil((a.endsAt-Date.now())/1000))}s</span></div>
+      <div class="fine">${hb?`Top bid: ${esc(hb.name)}${hb.id===me?.id?' (you)':''}`:'Bids start at $1'} · <span class="timer" id="auctionTimer">${Math.max(0,Math.ceil((a.endsAt-Date.now())/1000))}s</span></div>
       ${me && !me.bankrupt ? `<div class="actions">${inc}${B('pass','Pass','ghost sm','',!canBid)}</div>${a.passed.includes(me.id)?'<div class="fine">You passed.</div>':''}` : ''}
       ${a.passed.length?`<div class="fine">Passed: ${a.passed.map(id=>esc(byId(s,id)?.name)).join(', ')}</div>`:''}</div>`;
   } else if(myTurn){
