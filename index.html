@@ -141,6 +141,9 @@ label.field{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size
 .deck-chance{bottom:8%;right:6%;transform:rotate(-45deg);background:#fbd8b5}
 .deck-chance span{font-family:var(--f-logo);color:#e2711d}
 @container (max-width:540px){.deck{display:none}}
+.console.mobile{width:auto;max-height:none;overflow:visible;margin-top:14px;padding:14px 12px;gap:10px}
+.console.mobile .recent{display:flex}
+.console.mobile .btn{min-height:44px;min-width:56px}
 .console{position:relative;z-index:2;width:min(78%,400px);max-height:94%;overflow:auto;
   --cell:#fffdf6;--ink:#151515;--muted:#5b5a52;--line:#cdc6b3;--accent:#c4442b;--accent-ink:#fff;--danger:#b42335;--chip:#f1ecdf;
   background:var(--paper);color:var(--b-ink);border:2px solid var(--b-line);border-radius:14px;box-shadow:0 5px 0 var(--b-line),0 18px 34px rgba(0,0,0,.28);padding:14px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
@@ -560,8 +563,10 @@ const countType = (s,id,t) => SPACES.reduce((n,sp,i)=>n+(sp.t===t && s.owned[i] 
 const ownedBy = (s,id) => Object.keys(s.owned||{}).map(Number).filter(i=>s.owned[i].owner===id).sort((a,b)=>a-b);
 const anyDebts = s => s.players.some(p=>!p.bankrupt && p.debts.length);
 const debtTotal = p => p.debts.reduce((n,d)=>n+d.amt,0);
-const unmortCost = pos => { const m=SPACES[pos].p/2; return m+Math.ceil(m*0.1); };
+// A property received mortgaged this turn already had its 10% interest paid, so lifting it now costs just the mortgage.
+const unmortCost = (s,pos) => { const m=SPACES[pos].p/2; return s && s.owned && s.owned[pos] && s.owned[pos].xfer ? m : m+Math.ceil(m*0.1); };
 const fee10 = pos => Math.ceil(SPACES[pos].p/2*0.1);
+function receiveMortgaged(s,toId,pos){ s.owned[pos].xfer=true; pay(s,toId,null,fee10(pos),`10% interest on mortgaged ${SPACES[pos].n}`); }
 
 function log(s,m){ s.log.push({t:Date.now(),m}); if(s.log.length>150) s.log.splice(0,s.log.length-150); }
 function credit(s,to,amt){ if(to==='pot') s.pot+=amt; else if(to){ const p=byId(s,to); if(p) p.cash+=amt; } }
@@ -635,12 +640,27 @@ function drawCard(s,p,deck,dice){
     case 'collecteach': for(const o of activeP(s)) if(o.id!==p.id) pay(s,o.id,p.id,c.amt,'birthday'); break;
   }
 }
+function startAuction(s,pos,resume){
+  s.pending={type:'auction',pos,high:0,bidder:null,passed:[],endsAt:Date.now()+AUCTION_MS,id:Math.random().toString(36).slice(2,9)};
+  if(resume) s.pending.resume=resume;
+  s.phase='auction';
+}
+// Properties the bank takes from a bankrupt player are auctioned one after another (official rule).
+function runQueue(s){
+  while(s.status==='playing' && !s.pending && s.auctionQueue && s.auctionQueue.length){
+    const pos=s.auctionQueue.shift();
+    if(s.owned[pos]) continue;
+    log(s,`The bank is auctioning ${SPACES[pos].n}.`);
+    startAuction(s,pos,s.phase);
+  }
+}
 function returnJailCard(s,id){ (id[0]==='c'?s.decks.chance:s.decks.chest).push(id); }
 
 function advanceTurn(s){
   const n=s.players.length; let i=s.turn;
   for(let k=0;k<n;k++){ i=(i+1)%n; if(!s.players[i].bankrupt) break; }
   s.turn=i; s.phase='roll'; s.pending=null; s.doublesCount=0; s.extraRoll=false; s.turnNo++;
+  for(const k in s.owned) delete s.owned[k].xfer;
   log(s,`${cur(s).name}’s turn.`);
 }
 function checkWinner(s){
@@ -659,20 +679,30 @@ function bankrupt(s,id){
   }
   if(toPlayer){
     cred.cash+=Math.max(0,p.cash);
-    for(const i of ownedBy(s,id)){ s.owned[i].owner=cred.id; if(s.owned[i].mortgaged) pay(s,cred.id,null,fee10(i),`10% fee on mortgaged ${SPACES[i].n}`); }
+    for(const i of ownedBy(s,id)){ s.owned[i].owner=cred.id; if(s.owned[i].mortgaged) receiveMortgaged(s,cred.id,i); }
     cred.jailCards.push(...p.jailCards);
     log(s,`${p.name} went bankrupt. Everything they had goes to ${cred.name}.`);
   } else {
-    for(const i of ownedBy(s,id)) delete s.owned[i];
+    const taken=ownedBy(s,id);
+    for(const i of taken) delete s.owned[i];
     p.jailCards.forEach(c=>returnJailCard(s,c));
-    log(s,`${p.name} went bankrupt. Their properties return to the bank.`);
+    if(s.settings.auctions && taken.length){ (s.auctionQueue||(s.auctionQueue=[])).push(...taken); log(s,`${p.name} went bankrupt. The bank will auction their properties.`); }
+    else log(s,`${p.name} went bankrupt. Their properties return to the bank.`);
   }
   p.cash=0; p.debts=[]; p.jailCards=[]; p.bankrupt=true; p.inJail=false;
   s.trades=s.trades.filter(t=>t.from!==id && t.to!==id);
   for(const o of s.players) o.debts=o.debts.filter(d=>d.to!==id);
   if(s.pending?.type==='auction' && s.pending.bidder===id){ s.pending.bidder=null; s.pending.high=0; }
   checkWinner(s);
-  if(s.status==='playing' && cur(s).id===id) advanceTurn(s);
+  if(s.status==='playing' && cur(s).id===id){
+    // A property they were deciding on goes to auction; an auction already running carries on.
+    const keep=s.pending?.type==='auction'?s.pending:null;
+    if(s.pending?.type==='buy' && s.settings.auctions) (s.auctionQueue||(s.auctionQueue=[])).unshift(s.pending.pos);
+    advanceTurn(s);
+    if(keep){ keep.resume='roll'; s.pending=keep; s.phase='auction'; }
+  }
+  if(s.status!=='playing') s.auctionQueue=[];
+  runQueue(s);
 }
 
 /* ----- Actions: (state, actorId, ...args) ----- */
@@ -746,16 +776,14 @@ const A = {
     const pos=s.pending.pos, sp=SPACES[pos];
     if(p.cash<sp.p) fail(`You need ${money(sp.p)} to buy ${sp.n}.`);
     p.cash-=sp.p; s.owned[pos]={owner:p.id,houses:0,mortgaged:false}; s.pending=null;
-    log(s,`${p.name} bought ${sp.n} for ${money(sp.p)}.`); settle(s);
+    log(s,`${p.name} bought ${sp.n} for ${money(sp.p)}.`); settle(s); runQueue(s);
   },
   decline(s,actor){
     requireTurn(s,actor); const p=cur(s);
     if(s.pending?.type!=='buy') return false;
     const pos=s.pending.pos;
-    if(s.settings.auctions){
-      s.pending={type:'auction',pos,high:0,bidder:null,passed:[],endsAt:Date.now()+AUCTION_MS,id:Math.random().toString(36).slice(2,9)};
-      s.phase='auction'; log(s,`${p.name} passed on ${SPACES[pos].n}. It’s up for auction!`);
-    } else { s.pending=null; log(s,`${p.name} decided not to buy ${SPACES[pos].n}.`); settle(s); }
+    if(s.settings.auctions){ startAuction(s,pos); log(s,`${p.name} passed on ${SPACES[pos].n}. It’s up for auction!`); }
+    else { s.pending=null; log(s,`${p.name} decided not to buy ${SPACES[pos].n}.`); settle(s); runQueue(s); }
   },
   bid(s,actor,amount){
     requirePlaying(s); const p=requireActive(s,actor); const a=s.pending;
@@ -781,7 +809,9 @@ const A = {
     const a=s.pending, sp=SPACES[a.pos]; const w=a.bidder && byId(s,a.bidder);
     if(w && !w.bankrupt && w.cash>=a.high){ w.cash-=a.high; s.owned[a.pos]={owner:w.id,houses:0,mortgaged:false}; log(s,`${w.name} won the auction for ${sp.n} at ${money(a.high)}.`); }
     else log(s,`Nobody bought ${sp.n}. It stays with the bank.`);
-    s.pending=null; settle(s);
+    s.pending=null;
+    if(a.resume) s.phase=a.resume; else settle(s);
+    runQueue(s);
   },
   finishAuction(s,actor,aid){
     const a=s.pending; if(s.status!=='playing' || a?.type!=='auction' || a.id!==aid) return false;
@@ -823,7 +853,7 @@ const A = {
       else { o.houses=0; s.bank.hotels++; p.cash+=sp.h/2*5; log(s,`${p.name} sold the hotel on ${sp.n} (the bank had no houses to swap in) for ${money(sp.h/2*5)}.`); }
     } else { o.houses--; s.bank.houses++; p.cash+=sp.h/2; log(s,`${p.name} sold a house on ${sp.n} for ${money(sp.h/2)}.`); } },
   mortgage(s,actor,pos){ const r=mortReason(s,actor,pos); if(r) fail(r); const sp=SPACES[pos],p=byId(s,actor); s.owned[pos].mortgaged=true; p.cash+=sp.p/2; log(s,`${p.name} mortgaged ${sp.n} for ${money(sp.p/2)}.`); },
-  unmortgage(s,actor,pos){ const r=unmortReason(s,actor,pos); if(r) fail(r); const sp=SPACES[pos],p=byId(s,actor); s.owned[pos].mortgaged=false; p.cash-=unmortCost(pos); log(s,`${p.name} paid ${money(unmortCost(pos))} to unmortgage ${sp.n}.`); },
+  unmortgage(s,actor,pos){ const r=unmortReason(s,actor,pos); if(r) fail(r); const sp=SPACES[pos],p=byId(s,actor),cost=unmortCost(s,pos); s.owned[pos].mortgaged=false; delete s.owned[pos].xfer; p.cash-=cost; log(s,`${p.name} paid ${money(cost)} to unmortgage ${sp.n}.`); },
   offer(s,actor,o){
     requirePlaying(s); const a=requireActive(s,actor); const b=byId(s,o.to);
     if(!b || b.bankrupt || b.id===a.id) fail('Pick another player to trade with.');
@@ -846,8 +876,8 @@ const A = {
     for(let k=0;k<t.give.cards;k++) b.jailCards.push(a.jailCards.pop());
     for(let k=0;k<t.get.cards;k++) a.jailCards.push(b.jailCards.pop());
     log(s,`${b.name} accepted a trade with ${a.name}.`);
-    for(const i of t.give.props) if(s.owned[i].mortgaged) pay(s,b.id,null,fee10(i),`10% fee on mortgaged ${SPACES[i].n}`);
-    for(const i of t.get.props) if(s.owned[i].mortgaged) pay(s,a.id,null,fee10(i),`10% fee on mortgaged ${SPACES[i].n}`);
+    for(const i of t.give.props) if(s.owned[i].mortgaged) receiveMortgaged(s,b.id,i);
+    for(const i of t.get.props) if(s.owned[i].mortgaged) receiveMortgaged(s,a.id,i);
   },
   declineTrade(s,actor,id){ const t=s.trades.find(x=>x.id===id); if(!t) return false; if(t.to!==actor && t.from!==actor) fail('That isn’t your trade.'); s.trades=s.trades.filter(x=>x.id!==id); log(s,`${byId(s,actor).name} ${t.from===actor?'withdrew':'declined'} a trade.`); },
 };
@@ -880,7 +910,7 @@ function mortReason(s,id,pos){
 function unmortReason(s,id,pos){
   let r=streetCheck(s,id,pos); if(r) return r;
   if(!s.owned[pos].mortgaged) return 'Not mortgaged.';
-  if(byId(s,id).cash<unmortCost(pos)) return `You need ${money(unmortCost(pos))}.`;
+  if(byId(s,id).cash<unmortCost(s,pos)) return `You need ${money(unmortCost(s,pos))}.`;
   return null;
 }
 function tradeBlock(s,pos){ const sp=SPACES[pos]; if(sp.g && GROUPS[sp.g].some(i=>s.owned[i]?.houses>0)) return 'Has buildings in its set'; return null; }
@@ -1280,6 +1310,9 @@ function cardPopHTML(s){
   const c=ui.cardPop, card=CARDS[c.id], p=byId(s,c.who), ch=c.deck==='chance';
   return `<button class="cardpop ${ch?'chance':'chest'}${Date.now()-c.at<450?' fresh':''}" data-act="dismissCard" aria-label="Close card"><header><span class="cp-ico">${ch?'?':ICON.chest}</span>${ch?'CHANCE':'COMMUNITY CHEST'}</header><p>${esc(card.txt)}</p><footer>${esc(p?.name||'')} drew this · tap to close</footer></button>`;
 }
+const phoneQuery=matchMedia('(max-width: 600px)');
+const isPhone=()=>phoneQuery.matches;
+phoneQuery.addEventListener?.('change',()=>{ if(typeof render==='function') render(); });
 function boardHTML(s,consoleInner){
   let h=''; for(let i=0;i<40;i++) h+=cellHTML(s,i);
   const pop=ui.cardPop && Date.now()>=ui.cardPop.at && s && s.status!=='lobby' ? cardPopHTML(s) : '';
@@ -1287,7 +1320,7 @@ function boardHTML(s,consoleInner){
       <div class="deck deck-chest" aria-hidden="true"><span class="art">${ICON.chest}</span><b>COMMUNITY CHEST</b></div>
       <div class="deck deck-chance" aria-hidden="true"><span>?</span><b>CHANCE</b></div>
       <div class="banner" aria-hidden="true">GRAND TOUR<small>TYCOON</small></div>
-      <div class="console">${consoleInner}</div>${pop}</div>${s?tokensLayer(s):demoTokensHTML()}</div></div>`;
+      ${consoleInner!=null?`<div class="console">${consoleInner}</div>`:''}${pop}</div>${s?tokensLayer(s):demoTokensHTML()}</div></div>`;
 }
 const B = (act,label,cls='',extra='',dis=false) => `<button class="btn ${cls}" data-act="${act}" ${extra} ${dis||ui.busy?'disabled':''}>${label}</button>`;
 function confirmBtn(key,act,label,cls='danger sm',extra=''){
@@ -1408,7 +1441,9 @@ function gameHTML(s){
       <select id="controlSel" data-act="control">${activeP(s).map(p=>`<option value="${esc(p.id)}"${p.id===ui.control?' selected':''}>${p.token} ${esc(p.name)}${p.id===cur(s).id?' (turn)':''}</option>`).join('')}</select></label>
       <p class="fine" style="margin-top:6px">Pass-and-play: this switches to whoever’s turn it is. Change it to bid, trade or pay debts as someone else.</p></div>`:'';
   const tools=`<div class="row">${B('rules','Rules','ghost sm')}${s.status==='playing'&&me&&!me.bankrupt?confirmBtn('resign','resign','Resign','ghost sm'):''}${s.status==='playing'&&isHost(s,actorId())?confirmBtn('endnow','endNow','End game now','ghost sm'):''}</div>`;
-  return `${topHTML(s)}<div class="layout"><div>${boardHTML(s,centerHTML(s))}</div>
+  // On phones the turn panel sits under the board, where there is room for every button.
+  const phone=isPhone();
+  return `${topHTML(s)}<div class="layout"><div>${boardHTML(s,phone?null:centerHTML(s))}${phone?`<div class="console mobile">${centerHTML(s)}</div>`:''}</div>
     <div class="side">${control}${playersHTML(s)}
       <div class="panel"><div class="tabs" role="tablist">${tabs.map(([k,l,n])=>`<button class="tab" role="tab" aria-selected="${ui.tab===k}" data-act="tab" data-tab="${k}">${l}${n?`<span class="n">${n}</span>`:''}</button>`).join('')}</div>${body}</div>
       ${tools}</div></div>`;
@@ -1575,7 +1610,7 @@ function deedModal(s,pos){
     const br=sp.t==='street'?buildReason(s,me.id,pos):null, sr=sp.t==='street'?sellReason(s,me.id,pos):null, mr=mortReason(s,me.id,pos), ur=unmortReason(s,me.id,pos);
     const btns=[];
     if(sp.t==='street'){ btns.push(B('build',`Build ${o.houses===4?'hotel':'house'} (${money(sp.h)})`,'primary sm',`data-pos="${pos}"`,!!br)); btns.push(B('sell',`Sell ${o.houses===5?'hotel':'house'} (+${money(sp.h/2)})`,'sm',`data-pos="${pos}"`,!!sr)); }
-    if(o.mortgaged) btns.push(B('unmortgage',`Unmortgage (${money(unmortCost(pos))})`,'sm',`data-pos="${pos}"`,!!ur));
+    if(o.mortgaged) btns.push(B('unmortgage',`Unmortgage (${money(unmortCost(s,pos))})`,'sm',`data-pos="${pos}"`,!!ur));
     else btns.push(B('mortgage',`Mortgage (+${money(sp.p/2)})`,'sm',`data-pos="${pos}"`,!!mr));
     const why=[br&&sp.t==='street'&&o.houses<5?'Build: '+br:'', o.mortgaged?(ur?'Unmortgage: '+ur:''):(mr?'Mortgage: '+mr:'')].filter(Boolean);
     tools=`<div class="row">${btns.join('')}</div>${why.length?`<div class="fine">${why.map(esc).join('<br>')}</div>`:''}`;
@@ -1607,10 +1642,10 @@ function rulesModal(s){
       <li><b>Buying:</b> land on an unowned street, railroad or utility to buy it at its printed price.${st.auctions?' If you pass, everyone bids in a quick auction (the timer resets on each bid).':''}</li>
       <li><b>Rent:</b> landing on someone’s property costs rent.${st.doubleRentSet?' Owning a full color set doubles the rent on unbuilt streets.':''} Railroads charge $25, $50, $100 or $200 depending on how many the owner has. Utilities charge 4× the dice, or 10× with both.</li>
       <li><b>Building:</b> with a full set you can buy houses, then a hotel after four houses${st.evenBuild?', building evenly across the set':''}. The bank has only 32 houses and 12 hotels. Selling returns half the price.</li>
-      <li><b>Mortgages:</b> mortgage a property for half its price (sell its set’s buildings first). No rent is collected on it. Unmortgaging costs the mortgage plus 10%. Receiving a mortgaged property in a trade costs a 10% fee.</li>
+      <li><b>Mortgages:</b> mortgage a property for half its price (sell its set’s buildings first). No rent is collected on it. Unmortgaging costs the mortgage plus 10%. If you receive a mortgaged property, you pay 10% interest at once and can lift the mortgage that same turn for just the mortgage value, or later for the mortgage plus 10%.</li>
       <li><b>Jail:</b> roll doubles, pay $50, or use a Get Out of Jail Free card. After three missed tries, pay $50 and move.${st.noRentInJail?' Players in jail collect no rent.':' You still collect rent in jail.'}</li>
       <li><b>Trading:</b> swap properties, cash and jail cards with any player at any time. Streets in a set with buildings can’t be traded.</li>
-      <li><b>Debt:</b> if you can’t pay, you owe it. Sell, mortgage or trade to raise the cash, or declare bankruptcy. Owed to a player, everything goes to them; owed to the bank, your properties return to the bank.</li>
+      <li><b>Debt:</b> if you can’t pay, you owe it. Sell, mortgage or trade to raise the cash, or declare bankruptcy. Owed to a player, everything goes to them; owed to the bank, the bank auctions your properties.</li>
       ${st.vacationCash?'<li><b>Free Parking cash:</b> taxes and fines go into a pot on Free Parking. Land there to take it all.</li>':''}
       ${st.doubleGo?'<li><b>Double GO:</b> landing exactly on GO pays $400.</li>':''}
     </ul></div></div>`;
