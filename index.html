@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="Grand Tour Tycoon: a live property-trading board game for 2 to 8 players. Buy cities, build hotels and bankrupt your friends.">
+<meta name="description" content="Grand Tour Tycoon: a live property-trading board game for 2 to 8 players. Buy property, build hotels and bankrupt your friends.">
 <meta property="og:title" content="Grand Tour Tycoon">
 <meta property="og:description" content="Join my game! A live property-trading board game for 2 to 8 players. No account needed.">
 <meta property="og:type" content="website">
@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Jost:wght@400;500;600;700;800&family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
-/* Layout: a classic printed game board (mint field, outward-facing deeds, card piles and a diagonal banner) sits on the table; the turn console floats in the board's center, the ledger runs beside it and stacks below on phones. */
+/* Layout: a classic printed game board (mint field, outward-facing spaces, card piles and a diagonal banner) sits on the table; the turn console floats in the board's center, the ledger runs beside it and stacks below on phones. */
 :root{
   --table:#e3e8e0; --table-hi:#f5f7f1; --cell:#fcfbf4; --ink:#17231e; --muted:#53655c; --line:#9db3a6;
   --panel:#f6f8f3; --accent:#c4442b; --accent-ink:#ffffff; --money:#16774a; --warn:#a85409; --danger:#b42335;
@@ -373,6 +373,42 @@ textarea.msg{width:100%;min-height:74px;padding:9px 11px;border-radius:9px;borde
 .bill small{font-size:10px;opacity:.75}
 .bill.stack{box-shadow:2px 2px 0 -1px #fff,2px 2px 0 0 rgba(0,0,0,.35),4px 4px 0 -1px #fff,4px 4px 0 0 rgba(0,0,0,.25)}
 .b1{background:#f7f4ea}.b5{background:#f6c8d3}.b10{background:#f4e27c}.b20{background:#a9dca5}.b50{background:#9ccaf0}.b100{background:#ead5a6}.b500{background:#f4b46c}
+
+/* ---------- Bigger, easier-to-read text ---------- */
+body{font-size:16px}
+.nm{font-size:clamp(6px,1.34cqi,13.5px);letter-spacing:0;line-height:1.05;padding:.55cqi .2cqi 0}
+.price{font-size:clamp(6px,1.32cqi,13px);font-weight:700}
+.sub{font-size:clamp(5px,1.02cqi,10.5px)}
+.corner b{font-size:clamp(8px,1.85cqi,18px)}
+.corner small{font-size:clamp(5px,1.05cqi,10.5px)}
+.status{font-size:clamp(16px,2.5cqi,23px)}
+.prompt{font-size:16px}
+.recent{font-size:14px}
+.fine{font-size:14px}
+.btn{font-size:15px}
+.btn.big{font-size:17px}
+.btn.sm{font-size:14px}
+.pname{font-size:16.5px}
+.cash{font-size:17px}
+.cash small{font-size:12px}
+.badge{font-size:11.5px}
+.tab{font-size:15.5px}
+.deed-row{font-size:15px;padding:8px 10px}
+.logl{font-size:14.5px}
+.msgs{font-size:15px}
+.trade{font-size:14.5px}
+.dbody{font-size:15.5px}
+.dhead h3{font-size:26px}
+.dc{font-size:14.5px}
+.dnote{font-size:12.5px}
+.cardpop p{font-size:clamp(16px,2.7cqi,22px)}
+.cardpop header{font-size:17px}
+.auction .hi{font-size:26px}
+.toggle b{font-size:15px}
+.toggle span{font-size:13.5px}
+.bill{font-size:12.5px}
+h2{font-size:18px}
+@media (max-width:560px){.prompt{font-size:14px}.btn{font-size:14px}.btn.big{font-size:15px}.status{font-size:16px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -392,7 +428,7 @@ const SHAREABLE = /^https?:$/.test(location.protocol);
 
 /* ================= Board data ================= */
 const GC = {brown:'#8b5a33',light:'#86cdea',pink:'#d43f88',orange:'#ef8a2a',red:'#d42a3c',yellow:'#f0c22e',green:'#1f9a55',blue:'#2554cc'};
-const GN = {brown:'Egypt',light:'Brazil',pink:'Turkey',orange:'Spain',red:'Italy',yellow:'Japan',green:'United Kingdom',blue:'United States'};
+const GN = {brown:'Brown',light:'Light Blue',pink:'Pink',orange:'Orange',red:'Red',yellow:'Yellow',green:'Green',blue:'Dark Blue'};
 // Board artwork, drawn in the printed-board style (black ink with flat color).
 const ICON = {
   rail:`<svg viewBox="0 0 64 40" aria-hidden="true"><g fill="#1a1a1a"><rect x="6" y="14" width="30" height="13" rx="2"/><rect x="36" y="5" width="17" height="22" rx="2"/><rect x="39.5" y="8.5" width="10" height="7" fill="#cfe6d1"/><rect x="11" y="6" width="6" height="9"/><rect x="9" y="3" width="10" height="4" rx="1"/><rect x="22" y="9" width="5" height="6" rx="2"/><path d="M1 27h59v4H1z"/><circle cx="13" cy="34" r="5"/><circle cx="27" cy="34" r="5"/><circle cx="46" cy="33" r="6.5"/><path d="M0 31l7-5v6z"/></g><g fill="#cfe6d1"><circle cx="13" cy="34" r="1.6"/><circle cx="27" cy="34" r="1.6"/><circle cx="46" cy="33" r="2"/></g></svg>`,
@@ -408,68 +444,68 @@ const QCOL = {7:'#d4317f',22:'#2563c9',36:'#ee7d1f'};
 const S = (n,g,p,r,h)=>({t:'street',n,g,p,r,h});
 const SPACES = [
   {t:'go',n:'GO'},
-  S('Alexandria','brown',60,[2,10,30,90,160,250],50),
+  S('Mediter\u00ADranean Avenue','brown',60,[2,10,30,90,160,250],50),
   {t:'chest',n:'Community Chest'},
-  S('Cairo','brown',60,[4,20,60,180,320,450],50),
+  S('Baltic Avenue','brown',60,[4,20,60,180,320,450],50),
   {t:'tax',n:'Income Tax',amt:200},
-  {t:'rail',n:'Central Station',p:200,ic:'rail'},
-  S('Salvador','light',100,[6,30,90,270,400,550],50),
+  {t:'rail',n:'Reading Railroad',p:200,ic:'rail'},
+  S('Oriental Avenue','light',100,[6,30,90,270,400,550],50),
   {t:'chance',n:'Chance'},
-  S('Rio de Janeiro','light',100,[6,30,90,270,400,550],50),
-  S('São Paulo','light',120,[8,40,100,300,450,600],50),
+  S('Vermont Avenue','light',100,[6,30,90,270,400,550],50),
+  S('Connecti\u00ADcut Avenue','light',120,[8,40,100,300,450,600],50),
   {t:'jail',n:'Jail'},
-  S('Izmir','pink',140,[10,50,150,450,625,750],100),
+  S('St. Charles Place','pink',140,[10,50,150,450,625,750],100),
   {t:'util',n:'Electric Company',p:150,ic:'bulb'},
-  S('Ankara','pink',140,[10,50,150,450,625,750],100),
-  S('Istanbul','pink',160,[12,60,180,500,700,900],100),
-  {t:'rail',n:'Harbor Line',p:200,ic:'rail'},
-  S('Seville','orange',180,[14,70,200,550,750,950],100),
+  S('States Avenue','pink',140,[10,50,150,450,625,750],100),
+  S('Virginia Avenue','pink',160,[12,60,180,500,700,900],100),
+  {t:'rail',n:'Pennsyl\u00ADvania Railroad',p:200,ic:'rail'},
+  S('St. James Place','orange',180,[14,70,200,550,750,950],100),
   {t:'chest',n:'Community Chest'},
-  S('Barcelona','orange',180,[14,70,200,550,750,950],100),
-  S('Madrid','orange',200,[16,80,220,600,800,1000],100),
+  S('Tennessee Avenue','orange',180,[14,70,200,550,750,950],100),
+  S('New York Avenue','orange',200,[16,80,220,600,800,1000],100),
   {t:'parking',n:'Free Parking'},
-  S('Naples','red',220,[18,90,250,700,875,1050],150),
+  S('Kentucky Avenue','red',220,[18,90,250,700,875,1050],150),
   {t:'chance',n:'Chance'},
-  S('Milan','red',220,[18,90,250,700,875,1050],150),
-  S('Rome','red',240,[20,100,300,750,925,1100],150),
-  {t:'rail',n:'Airport Express',p:200,ic:'rail'},
-  S('Osaka','yellow',260,[22,110,330,800,975,1150],150),
-  S('Kyoto','yellow',260,[22,110,330,800,975,1150],150),
+  S('Indiana Avenue','red',220,[18,90,250,700,875,1050],150),
+  S('Illinois Avenue','red',240,[20,100,300,750,925,1100],150),
+  {t:'rail',n:'B. & O. Railroad',p:200,ic:'rail'},
+  S('Atlantic Avenue','yellow',260,[22,110,330,800,975,1150],150),
+  S('Ventnor Avenue','yellow',260,[22,110,330,800,975,1150],150),
   {t:'util',n:'Water Works',p:150,ic:'tap'},
-  S('Tokyo','yellow',280,[24,120,360,850,1025,1200],150),
+  S('Marvin Gardens','yellow',280,[24,120,360,850,1025,1200],150),
   {t:'gotojail',n:'Go to Jail'},
-  S('Manchester','green',300,[26,130,390,900,1100,1275],200),
-  S('Edinburgh','green',300,[26,130,390,900,1100,1275],200),
+  S('Pacific Avenue','green',300,[26,130,390,900,1100,1275],200),
+  S('North Carolina Avenue','green',300,[26,130,390,900,1100,1275],200),
   {t:'chest',n:'Community Chest'},
-  S('London','green',320,[28,150,450,1000,1200,1400],200),
-  {t:'rail',n:'Metro Line',p:200,ic:'rail'},
+  S('Pennsyl\u00ADvania Avenue','green',320,[28,150,450,1000,1200,1400],200),
+  {t:'rail',n:'Short Line',p:200,ic:'rail'},
   {t:'chance',n:'Chance'},
-  S('San Francisco','blue',350,[35,175,500,1100,1300,1500],200),
+  S('Park Place','blue',350,[35,175,500,1100,1300,1500],200),
   {t:'tax',n:'Luxury Tax',amt:100},
-  S('New York','blue',400,[50,200,600,1400,1700,2000],200),
+  S('Boardwalk','blue',400,[50,200,600,1400,1700,2000],200),
 ];
 const GROUPS = {};
 SPACES.forEach((sp,i)=>{ if(sp.g)(GROUPS[sp.g]||(GROUPS[sp.g]=[])).push(i); });
 const BUYABLE = t => t==='street'||t==='rail'||t==='util';
 
 const CARDS = {
-  c0:{txt:'Advance to GO. Collect $200.',a:'move',to:0},
-  c1:{txt:'Advance to Rome. If you pass GO, collect $200.',a:'move',to:24},
-  c2:{txt:'Advance to Izmir. If you pass GO, collect $200.',a:'move',to:11},
-  c3:{txt:'Advance to the nearest utility. If it is owned, roll the dice and pay the owner 10× the total.',a:'nearest',kind:'util'},
-  c4:{txt:'Advance to the nearest station. If it is owned, pay the owner twice the rent.',a:'nearest',kind:'rail'},
-  c5:{txt:'Advance to the nearest station. If it is owned, pay the owner twice the rent.',a:'nearest',kind:'rail'},
+  c0:{txt:'Advance to GO. (Collect $200)',a:'move',to:0},
+  c1:{txt:'Advance to Illinois Avenue. If you pass GO, collect $200.',a:'move',to:24},
+  c2:{txt:'Advance to St. Charles Place. If you pass GO, collect $200.',a:'move',to:11},
+  c3:{txt:'Advance to the nearest Utility. If unowned, you may buy it from the Bank. If owned, throw the dice and pay the owner ten times the amount thrown.',a:'nearest',kind:'util'},
+  c4:{txt:'Advance to the nearest Railroad. If unowned, you may buy it from the Bank. If owned, pay the owner twice the rental they are otherwise entitled to.',a:'nearest',kind:'rail'},
+  c5:{txt:'Advance to the nearest Railroad. If unowned, you may buy it from the Bank. If owned, pay the owner twice the rental they are otherwise entitled to.',a:'nearest',kind:'rail'},
   c6:{txt:'The bank pays you a dividend of $50.',a:'cash',amt:50},
   c7:{txt:'Get Out of Jail Free. Keep this card until you need it, or trade it.',a:'jailfree'},
   c8:{txt:'Go back 3 spaces.',a:'back',n:3},
   c9:{txt:'Go directly to Jail. Do not pass GO, do not collect $200.',a:'jail'},
   c10:{txt:'General repairs on all your property: pay $25 per house and $100 per hotel.',a:'repairs',h:25,H:100},
   c11:{txt:'Speeding fine. Pay $15.',a:'cash',amt:-15},
-  c12:{txt:'Take a trip to Central Station. If you pass GO, collect $200.',a:'move',to:5},
-  c13:{txt:'Advance to New York.',a:'move',to:39},
+  c12:{txt:'Take a trip to Reading Railroad. If you pass GO, collect $200.',a:'move',to:5},
+  c13:{txt:'Advance to Boardwalk.',a:'move',to:39},
   c14:{txt:'You have been elected chair of the board. Pay each player $50.',a:'payeach',amt:50},
   c15:{txt:'Your building loan matures. Collect $150.',a:'cash',amt:150},
-  k0:{txt:'Advance to GO. Collect $200.',a:'move',to:0},
+  k0:{txt:'Advance to GO. (Collect $200)',a:'move',to:0},
   k1:{txt:'Bank error in your favor. Collect $200.',a:'cash',amt:200},
   k2:{txt:'Doctor’s fee. Pay $50.',a:'cash',amt:-50},
   k3:{txt:'From the sale of stock you get $50.',a:'cash',amt:50},
@@ -820,7 +856,7 @@ function streetCheck(s,id,pos){ const sp=SPACES[pos],o=s.owned?.[pos]; if(s.stat
 function buildReason(s,id,pos){
   const sp=SPACES[pos]; let r=streetCheck(s,id,pos); if(r) return r; if(sp.t!=='street') return 'You can only build on streets.';
   const o=s.owned[pos], p=byId(s,id), g=GROUPS[sp.g];
-  if(!ownsSet(s,id,sp.g)) return `Own all of ${GN[sp.g]} first.`;
+  if(!ownsSet(s,id,sp.g)) return `Own every ${GN[sp.g]} property first.`;
   if(g.some(i=>s.owned[i].mortgaged)) return 'Unmortgage the whole set first.';
   if(o.houses>=5) return 'This street already has a hotel.';
   if(s.settings.evenBuild && o.houses>Math.min(...g.map(i=>s.owned[i].houses))) return 'Build evenly: add to the other streets in this set first.';
@@ -1294,7 +1330,7 @@ function centerHTML(s){
     } else if(s.phase==='buy' && s.pending){
       const sp=SPACES[s.pending.pos];
       main=`<div class="prompt">Buy <b>${esc(sp.n)}</b> for <b class="mono">${money(sp.p)}</b>? You have <span class="mono">${money(p.cash)}</span>.</div>
-        <div class="actions">${B('buy',`Buy ${money(sp.p)}`,'primary big','',p.cash<sp.p)}${B('decline',s.settings.auctions?'Auction it':'Don’t buy','')}${B('deed','Deed','ghost',`data-pos="${s.pending.pos}"`)}</div>
+        <div class="actions">${B('buy',`Buy ${money(sp.p)}`,'primary big','',p.cash<sp.p)}${B('decline',s.settings.auctions?'Auction it':'Don’t buy','')}${B('deed','View card','ghost',`data-pos="${s.pending.pos}"`)}</div>
         ${p.cash<sp.p?'<div class="fine">Not enough cash. Mortgage something or put it up for auction.</div>':''}`;
     } else if(s.phase==='end'){
       const waiting=s.players.filter(x=>!x.bankrupt && x.debts.length && x.id!==p.id);
@@ -1330,12 +1366,12 @@ function billsHTML(cash){
 }
 function stateLabel(o){ return o.mortgaged?'Mortgaged':o.houses===5?'Hotel':o.houses?`${o.houses} house${o.houses>1?'s':''}`:''; }
 function propsTab(s,me){
-  if(!me) return '<p class="fine">Join a game to own property. Tap any space on the board to see its deed.</p>';
+  if(!me) return '<p class="fine">Join a game to own property. Tap any space on the board to see its Title Deed card.</p>';
   const mine=ownedBy(s,me.id);
-  if(!mine.length) return '<p class="fine">No property yet. Land on a space that’s for sale and buy it. Tap any space on the board to see its deed.</p>';
+  if(!mine.length) return '<p class="fine">No property yet. Land on a space that’s for sale and buy it. Tap any space on the board to see its Title Deed card.</p>';
   return `<div class="deeds">${mine.map(i=>{ const sp=SPACES[i],o=s.owned[i];
     return `<button class="deed-row" data-act="deed" data-pos="${i}"><span class="swatch" style="background:${sp.g?GC[sp.g]:'transparent'};${sp.g?'':'border:0'}"></span><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700">${sp.g?'':`<span class="ico-s">${ICON[sp.ic]}</span> `}${esc(sp.n)}</span><span class="st">${stateLabel(o)} ${sp.g&&ownsSet(s,me.id,sp.g)?'· Set':''}</span></button>`; }).join('')}</div>
-    <p class="fine" style="margin-top:8px">Tap a deed to build, sell or mortgage.</p>`;
+    <p class="fine" style="margin-top:8px">Tap a property to see its Title Deed card and build, sell or mortgage.</p>`;
 }
 function sideSummary(s,side){
   const parts=[]; if(side.cash) parts.push(`<li class="mono">${money(side.cash)}</li>`);
@@ -1365,7 +1401,7 @@ function gameHTML(s){
   const me=meP(s);
   const incoming=me?s.trades.filter(t=>t.to===me.id).length:0;
   const chatN=(app.chat?.msgs?.length||0)-ui.chatSeen;
-  const tabs=[['props','Deeds'],['trades','Trades',incoming],...(s.local?[]:[['chat','Chat',ui.tab==='chat'?0:Math.max(0,chatN)]]),['log','Log']];
+  const tabs=[['props','Properties'],['trades','Trades',incoming],...(s.local?[]:[['chat','Chat',ui.tab==='chat'?0:Math.max(0,chatN)]]),['log','Log']];
   if(ui.tab==='chat') ui.chatSeen=app.chat?.msgs?.length||0;
   const body=ui.tab==='trades'?tradesTab(s,me):ui.tab==='log'?logTab(s):ui.tab==='chat'&&!s.local?chatTab(s):propsTab(s,me);
   const control=s.local&&s.status==='playing'?`<div class="panel"><label class="field" for="controlSel">Playing as
@@ -1394,8 +1430,8 @@ function homeHTML(){
   return `${topHTML(null)}<div class="home">
     <div class="stack" style="gap:18px">
       <div class="hero"><div class="eyebrow">A property-trading board game for 2–8 players</div><h1>Buy the world.<br><em>Bankrupt your friends.</em></h1>
-      <p class="lede">Roll, buy cities from Cairo to New York, build houses and hotels, trade, and collect rent until one player owns it all. Play live with up to seven friends.</p></div>
-      ${boardHTML(null,`<div class="status">Grand Tour Tycoon</div>${diceHTML()}<div class="prompt muted">40 spaces · 22 cities · 4 stations · 2 utilities · 32 cards</div>`)}
+      <p class="lede">Roll the dice, buy everything from Mediterranean Avenue to Boardwalk, build houses and hotels, trade, and collect rent until one player owns it all. Play live with up to seven friends.</p></div>
+      ${boardHTML(null,`<div class="status">Grand Tour Tycoon</div>${diceHTML()}<div class="prompt muted">40 spaces · 22 streets · 4 railroads · 2 utilities · 32 cards</div>`)}
     </div>
     <div class="stack" style="gap:14px">
       ${openList.length?`<div class="panel stack joinable"><h2>Games waiting for you</h2><p class="fine">Tap Join. No code or link needed.</p><div class="games">${openList.map(joinRow).join('')}</div></div>`:''}
@@ -1513,18 +1549,18 @@ function deedModal(s,pos){
   if(sp.t==='street'){
     const lv=o?(o.houses||0):-1, full=s&&o&&ownsSet(s,o.owner,sp.g), dbl=!s||s.settings.doubleRentSet;
     const light=['light','yellow'].includes(sp.g);
-    head=`<div class="dhead" style="background:${GC[sp.g]};color:${light?'#151515':'#fff'}"><small>TITLE DEED · ${esc(GN[sp.g].toUpperCase())}</small><h3>${esc(sp.n)}</h3></div>`;
+    head=`<div class="dhead" style="background:${GC[sp.g]};color:${light?'#151515':'#fff'}"><small>TITLE DEED</small><h3>${esc(sp.n)}</h3></div>`;
     const lab=['','With 1 House','With 2 Houses','With 3 Houses','With 4 Houses','With HOTEL'];
     body=`<div class="dline c${lv===0&&!(full&&dbl)?' now':''}"><span>RENT ${money(sp.r[0])}</span></div>
       ${[1,2,3,4,5].map(k=>`<div class="dline${lv===k?' now':''}"><span>${lab[k]}</span><span>${money(sp.r[k])}</span></div>`).join('')}
       ${dbl?`<div class="dline${lv===0&&full?' now':''}"><span>Full color set, no houses</span><span>${money(sp.r[0]*2)}</span></div>`:''}
       <div class="dsep"></div>
       <div class="dc">Mortgage Value ${money(sp.p/2)}</div><div class="dc">Houses cost ${money(sp.h)} each</div><div class="dc">Hotels, ${money(sp.h)} plus 4 houses</div>
-      ${dbl?`<p class="dnote">If a player owns ALL the cities of a color group, the rent is doubled on unimproved cities in that group.</p>`:''}`;
+      ${dbl?`<p class="dnote">If a player owns ALL the Lots of any Color-Group, the rent is Doubled on Unimproved Lots in that group.</p>`:''}`;
   } else if(sp.t==='rail'){
     const n=o?countType(s,o.owner,'rail'):0;
-    head=`<div class="dhead" style="background:#fffdf6"><span class="ico">${ICON[sp.ic]}</span><small>STATION</small><h3>${esc(sp.n)}</h3></div>`;
-    body=`${[1,2,3,4].map(k=>`<div class="dline${n===k?' now':''}"><span>${k===1?'Rent':`If ${k} stations are owned`}</span><span>${money(25*2**(k-1))}</span></div>`).join('')}
+    head=`<div class="dhead" style="background:#fffdf6"><span class="ico">${ICON[sp.ic]}</span><small>RAILROAD</small><h3>${esc(sp.n)}</h3></div>`;
+    body=`${[1,2,3,4].map(k=>`<div class="dline${n===k?' now':''}"><span>${k===1?'Rent':`If ${k} Railroads are owned`}</span><span>${money(25*2**(k-1))}</span></div>`).join('')}
       <div class="dsep"></div><div class="dc">Mortgage Value $100</div>`;
   } else {
     const n=o?countType(s,o.owner,'util'):0;
@@ -1568,8 +1604,8 @@ function rulesModal(s){
     <ul>
       <li><b>Goal:</b> be the last player who isn’t bankrupt. The host can also end early; the highest net worth wins.</li>
       <li><b>Turns:</b> roll two dice and move. Doubles let you roll again; three doubles in a row send you to jail. Passing GO pays $200.</li>
-      <li><b>Buying:</b> land on an unowned city, station or utility to buy it at list price.${st.auctions?' If you pass, everyone bids in a quick auction (the timer resets on each bid).':''}</li>
-      <li><b>Rent:</b> landing on someone’s property costs rent.${st.doubleRentSet?' Owning a full color set doubles the rent on unbuilt streets.':''} Stations pay $25, $50, $100 or $200 by how many the owner has. Utilities charge 4× the dice, or 10× with both.</li>
+      <li><b>Buying:</b> land on an unowned street, railroad or utility to buy it at its printed price.${st.auctions?' If you pass, everyone bids in a quick auction (the timer resets on each bid).':''}</li>
+      <li><b>Rent:</b> landing on someone’s property costs rent.${st.doubleRentSet?' Owning a full color set doubles the rent on unbuilt streets.':''} Railroads charge $25, $50, $100 or $200 depending on how many the owner has. Utilities charge 4× the dice, or 10× with both.</li>
       <li><b>Building:</b> with a full set you can buy houses, then a hotel after four houses${st.evenBuild?', building evenly across the set':''}. The bank has only 32 houses and 12 hotels. Selling returns half the price.</li>
       <li><b>Mortgages:</b> mortgage a property for half its price (sell its set’s buildings first). No rent is collected on it. Unmortgaging costs the mortgage plus 10%. Receiving a mortgaged property in a trade costs a 10% fee.</li>
       <li><b>Jail:</b> roll doubles, pay $50, or use a Get Out of Jail Free card. After three missed tries, pay $50 and move.${st.noRentInJail?' Players in jail collect no rent.':' You still collect rent in jail.'}</li>
