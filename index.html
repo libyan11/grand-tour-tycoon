@@ -968,34 +968,70 @@ function sideReason(s,p,side){
 // data and strict routers), moves travel through a public MQTT message relay over a normal secure web
 // connection instead. The host always listens on both, so it works whichever side has the strict network.
 const PEER_PREFIX = 'grandtourtycoon-v1-';
-const RELAY_URL = 'wss://broker.emqx.io:8084/mqtt';
+// Shown on the start and joining screens, so players can tell whether they have the latest version.
+const VERSION = '2026.11.01-r3';
+// Several free public relays are used at once: if one is blocked on a network (some mobile networks only
+// allow port 443), another still gets through. Every message goes to all of them; duplicates are dropped.
+const RELAYS = [
+  ['wss://public.cloud.shiftr.io:443', {username:'public', password:'public'}],
+  ['wss://broker.emqx.io:8084/mqtt', {}],
+  ['wss://broker.hivemq.com:8884/mqtt', {}],
+];
 const DIRECT_WAIT = 6000;
 const FORCE_RELAY = /[?&]relay=1\b/.test(location.search);
+// Testing aid: ?via=shiftr limits this browser to matching relays, to imitate a network that blocks the others.
+const RELAY_ONLY = (location.search.match(/[?&]via=([a-z0-9.]+)/)||[])[1] || '';
 const directOK = () => typeof Peer==='function' && !app.noRTC && !FORCE_RELAY;
 const relayOK = () => typeof mqtt!=='undefined' && !!(window.crypto && crypto.subtle);
 const recent = {
   list(){ try{ return JSON.parse(lsGet('gtt:recent')||'[]'); }catch(e){ return []; } },
   add(code,host){ const l=recent.list().filter(r=>r.code!==code); l.unshift({code,host,at:Date.now()}); lsSet('gtt:recent',JSON.stringify(l.slice(0,8))); },
 };
-// Relay channels are named after a hash of the room code, so the code itself never appears on the relay.
-async function relayBase(code){
-  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('grandtourtycoon-v1:'+code));
-  return 'gtt1/'+[...new Uint8Array(h)].slice(0,16).map(x=>x.toString(16).padStart(2,'0')).join('');
-}
+// Relay channels are named after a hash of the room code, and messages are encrypted with a key made from
+// the code, so the public relays only ever carry unreadable data.
+const sha256 = s => crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
+async function relayBase(code){ return 'gtt2/'+[...new Uint8Array(await sha256('grandtourtycoon-v2:'+code))].slice(0,16).map(x=>x.toString(16).padStart(2,'0')).join(''); }
+async function relayKey(code){ return crypto.subtle.importKey('raw',await sha256('grandtourtycoon-key:'+code),'AES-GCM',false,['encrypt','decrypt']); }
 class RelayLink{
-  constructor(code,listen,onMsg,onChange){ this.code=code; this.listen=listen; this.onMsg=onMsg; this.onChange=onChange; this.up=false; this.start(); }
+  constructor(code,listen,onMsg,onChange){
+    this.code=code; this.listen=listen; this.onMsg=onMsg; this.onChange=onChange; this.clients=[];
+    this.seen=new Set(); this.seenQ=[]; this.inChain=Promise.resolve(); this.outChain=Promise.resolve(); this.wasUp=false;
+    this.start();
+  }
+  get up(){ return this.clients.some(c=>c.connected); }
   async start(){
     if(!relayOK()) return;
-    try{ this.base=await relayBase(this.code); }catch(e){ return; }
+    try{ this.base=await relayBase(this.code); this.key=await relayKey(this.code); }catch(e){ return; }
     if(this.closed) return;
-    const c=this.client=mqtt.connect(RELAY_URL,{reconnectPeriod:3000,connectTimeout:10000,clean:true,keepalive:30});
-    c.on('connect',()=>{ c.subscribe(this.base+'/'+this.listen,{qos:0}); this.up=true; this.onChange&&this.onChange(true); });
-    c.on('close',()=>{ if(this.up){ this.up=false; this.onChange&&this.onChange(false); } });
-    c.on('error',()=>{});
-    c.on('message',(topic,buf)=>{ let m; try{ m=JSON.parse(new TextDecoder().decode(buf)); }catch(e){ return; } if(m && typeof m==='object') this.onMsg(m); });
+    for(const [url,opts] of RELAYS.filter(([u])=>!RELAY_ONLY || u.includes(RELAY_ONLY))){
+      let c; try{ c=mqtt.connect(url,{reconnectPeriod:4000,connectTimeout:10000,clean:true,keepalive:30,...opts}); }catch(e){ continue; }
+      this.clients.push(c);
+      c.on('connect',()=>{ c.subscribe(this.base+'/'+this.listen,{qos:0}); this.changed(); });
+      c.on('close',()=>this.changed());
+      c.on('error',()=>{});
+      // Decrypt one message at a time so they are handled in the order they arrived.
+      c.on('message',(topic,buf)=>{ const data=new Uint8Array(buf); this.inChain=this.inChain.then(()=>this.receive(data)).catch(()=>{}); });
+    }
   }
-  send(to,m){ try{ if(this.client && this.up) this.client.publish(this.base+'/'+to,JSON.stringify(m),{qos:0}); }catch(e){} }
-  close(){ this.closed=true; try{ this.client && this.client.end(true); }catch(e){} }
+  changed(){ const u=this.up; if(u!==this.wasUp){ this.wasUp=u; this.onChange&&this.onChange(u); } }
+  async receive(data){
+    if(data.length<13) return;
+    let m; try{ m=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:data.slice(0,12)},this.key,data.slice(12)))); }catch(e){ return; }
+    if(!m || typeof m!=='object' || !m.mid || this.seen.has(m.mid)) return;
+    this.seen.add(m.mid); this.seenQ.push(m.mid); if(this.seenQ.length>800) this.seen.delete(this.seenQ.shift());
+    this.onMsg(m);
+  }
+  send(to,m){
+    this.outChain=this.outChain.then(async()=>{
+      if(!this.key || this.closed) return;
+      const iv=crypto.getRandomValues(new Uint8Array(12));
+      const msg={...m,mid:Date.now().toString(36)+Math.random().toString(36).slice(2,10)};
+      const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},this.key,new TextEncoder().encode(JSON.stringify(msg))));
+      const out=new Uint8Array(12+ct.length); out.set(iv); out.set(ct,12);
+      for(const c of this.clients) if(c.connected){ try{ c.publish(this.base+'/'+to,out,{qos:0}); }catch(e){} }
+    }).catch(()=>{});
+  }
+  close(){ this.closed=true; for(const c of this.clients){ try{ c.end(true); }catch(e){} } }
 }
 class HostGame{
   constructor(code){
@@ -1636,7 +1672,7 @@ function homeHTML(){
         <p class="fine">Pass-and-play with everyone around one screen. No account needed.</p>
         <div class="row">${B('local','Start a local game')}${lsGet('gtt:local:LOCAL')?B('resumeLocal','Resume local game','ghost'):''}</div>
       </div>
-      <div class="row">${B('rules','How to play','ghost sm')}</div>
+      <div class="row">${B('rules','How to play','ghost sm')}<span class="fine">Version ${VERSION}</span></div>
     </div></div>`;
 }
 function recentHTML(){
@@ -1707,7 +1743,7 @@ function render(){
   const root=$('#root'); const s=app.s;
   if(app.view==='home') root.innerHTML=homeHTML();
   else if(!s) root.innerHTML=`${topHTML(null)}<div class="panel stack" style="max-width:460px;margin:40px auto;text-align:center"><h2>${app.missing?'Can\u2019t reach room '+esc(app.code||''):'Joining room '+esc(app.code||'')+'…'}</h2>
-      <p class="fine">${app.missing?'Check the code, or ask the host to open the game on their device. We\u2019ll keep trying.':app.slow?'The game table can’t be reached yet. Check your connection.':'Loading the table.'}</p><div>${B('home','Back to start','ghost')}</div></div>`;
+      <p class="fine">${app.missing?'Check the code, or ask the host to open the game on their device and reload it. We\u2019ll keep trying.':app.slow?'Can\u2019t reach the host yet. Make sure the host has the game open on their device and has reloaded the page to get the latest version. Still trying\u2026':'Loading the table.'}</p><div>${B('home','Back to start','ghost')}</div><p class="fine">Version ${VERSION}</p></div>`;
   else if(s.status==='closed') root.innerHTML=`${topHTML(null)}<div class="panel stack" style="max-width:460px;margin:40px auto;text-align:center"><h2>This game was closed</h2><div>${B('home','Back to start','ghost')}</div></div>`;
   else if(s.status==='lobby') root.innerHTML=lobbyHTML(s);
   else root.innerHTML=gameHTML(s);
