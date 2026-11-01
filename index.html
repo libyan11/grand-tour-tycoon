@@ -8,12 +8,17 @@
 <meta property="og:description" content="Join my game! A live property-trading board game for 2 to 8 players. No account needed.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#1f3b8c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tycoon">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='14' width='56' height='36' rx='4' fill='%231f3b8c' transform='rotate(-6 32 32)'/%3E%3Ctext x='32' y='42' text-anchor='middle' font-family='Georgia,serif' font-weight='900' font-size='24' fill='%23fff' transform='rotate(-6 32 32)'%3EGT%3C/text%3E%3C/svg%3E">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font-size:14px}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Grand Tour Tycoon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Jost:wght@400;500;600;700;800&family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow:wght@400;500;600;700;800&family=Barlow+Semi+Condensed:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 /* Layout: a classic printed game board (mint field, outward-facing spaces, card piles and a diagonal banner) sits on the table; the turn console floats in the board's center, the ledger runs beside it and stacks below on phones. */
 :root{
@@ -23,7 +28,7 @@
   /* The board is a printed object: same colors in light and dark. */
   --mint:#cfe6d1; --b-line:#151515; --paper:#fffdf6; --b-ink:#151515; --mat:#f4ecda;
   --f-logo:'Alfa Slab One',Rockwell,'Roboto Slab',Georgia,serif;
-  --f-body:'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --f-body:'Barlow',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   --f-mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -168,7 +173,10 @@ label.field{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size
 .dice.rolling .die3{animation:bounce .32s ease-in-out infinite alternate}
 .dice.rolling .cube{animation:spin3 .5s linear infinite}
 .dice.rolling .die3:nth-child(2) .cube{animation-duration:.42s;animation-direction:reverse}
-.dice.landed .cube{animation:land .55s cubic-bezier(.2,.8,.3,1.25)}
+.dice.landed .flat{animation:land2 .5s cubic-bezier(.2,.8,.3,1.3)}
+.f.flat{transform:none;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+.f.flat.one i.on{background:radial-gradient(circle at 40% 35%,#ef5b5b,#a3121c)}
+@keyframes land2{from{transform:rotate(-35deg) scale(.6)}to{transform:none}}
 @keyframes spin3{from{transform:rotateX(0) rotateY(0) rotateZ(0)}to{transform:rotateX(360deg) rotateY(720deg) rotateZ(360deg)}}
 @keyframes bounce{to{transform:translateY(-28%)}}
 @keyframes land{from{transform:var(--to) rotateX(-160deg) rotateY(140deg)}to{transform:var(--to)}}
@@ -326,7 +334,7 @@ textarea.msg{width:100%;min-height:74px;padding:9px 11px;border-radius:9px;borde
 @keyframes tin{from{transform:translateY(-8px);opacity:0}}
 
 /* ---------- Classic printed-board details ---------- */
-:root{--f-board:'Jost','Futura','Century Gothic',Arial,sans-serif}
+:root{--f-board:'Barlow Semi Condensed','Barlow','Arial Narrow',Arial,sans-serif}
 .cell,.corner,.center,.deedcard,.cardpop{font-family:var(--f-board)}
 .nm{font-weight:700;font-stretch:normal;font-size:clamp(5px,1.12cqi,11px);letter-spacing:.01em;line-height:1.08;padding:.6cqi .3cqi 0;overflow-wrap:break-word;word-break:normal;hyphens:manual}
 .price{font-weight:600;font-size:clamp(5px,1.12cqi,11px);letter-spacing:.02em}
@@ -435,6 +443,15 @@ h2{font-size:18px}
 .layout{grid-template-columns:minmax(0,1fr) 400px}
 .board-wrap{width:min(100%,calc(100vh - 80px))}
 @media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- iPhone and touch screens ---------- */
+/* Safari zooms the page when a text box under 16px gets focus, so keep them at 16px on touch screens. */
+@media (pointer:coarse){input[type=text],input[type=number],select,textarea{font-size:16px!important}}
+/* Taps act at once and never double-tap-zoom; no grey flash or long-press menu on game controls. */
+button,.cell,.pick,.tab,.sw{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.board{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.f{-webkit-backface-visibility:hidden}
+.cube{-webkit-transform-style:preserve-3d}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -444,8 +461,9 @@ h2{font-size:18px}
 <div id="modal"></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div id="fx" aria-hidden="true"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="vendor/qrcode-generator-1.4.4.min.js"></script>
+<script src="vendor/peerjs-1.5.4.min.js"></script>
+<script src="vendor/mqtt-5.10.1.min.js"></script>
 
 <script>
 "use strict";
@@ -462,7 +480,7 @@ const ICON = {
   tap:`<svg viewBox="0 0 64 58" aria-hidden="true"><g stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"><path d="M4 19h30c8 0 14 6 14 14v4H38v-3c0-3-2-5-5-5H4z" fill="#a9bfd0"/><rect x="18" y="9" width="8" height="10" fill="#a9bfd0"/><path d="M10 7h24" stroke-width="5" stroke-linecap="round"/><path d="M4 16v16" stroke-width="4"/></g><path d="M43 41s-5 6-5 9a5 5 0 0010 0c0-3-5-9-5-9z" fill="#3a8ee6" stroke="#1a1a1a" stroke-width="2"/></svg>`,
   chest:`<svg viewBox="0 0 64 52" aria-hidden="true"><g stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"><path d="M6 22h52v26H6z" fill="#3b7cc2"/><path d="M6 22C6 10 14 4 32 4s26 6 26 18z" fill="#5c9ddb"/><path d="M14 6v42M50 6v42" stroke="#e5b522" stroke-width="5"/><path d="M6 22h52"/><rect x="26" y="17" width="12" height="13" rx="2" fill="#e5b522"/></g><circle cx="32" cy="23" r="2" fill="#1a1a1a"/><path d="M31 23h2v4h-2z" fill="#1a1a1a"/></svg>`,
   ring:`<svg viewBox="0 0 48 58" aria-hidden="true"><circle cx="24" cy="38" r="15" fill="none" stroke="#1a1a1a" stroke-width="7.5"/><circle cx="24" cy="38" r="15" fill="none" stroke="#d9ad2b" stroke-width="4.5"/><path d="M14 9h20l7 8-17 15L7 17z" fill="#c9ecff" stroke="#1a1a1a" stroke-width="2" stroke-linejoin="round"/><path d="M7 17h34M19 9l-3 8 8 15 8-15-3-8" fill="none" stroke="#1a1a1a" stroke-width="1.3"/></svg>`,
-  tax:`<svg viewBox="0 0 56 56" aria-hidden="true"><path d="M28 3l25 25-25 25L3 28z" fill="#fffdf6" stroke="#1a1a1a" stroke-width="2.5"/><path d="M28 10l18 18-18 18-18-18z" fill="none" stroke="#1a1a1a" stroke-width="1.2"/><text x="28" y="36" text-anchor="middle" font-family="Jost,Arial,sans-serif" font-weight="800" font-size="22" fill="#1a1a1a">$</text></svg>`,
+  tax:`<svg viewBox="0 0 56 56" aria-hidden="true"><path d="M28 3l25 25-25 25L3 28z" fill="#fffdf6" stroke="#1a1a1a" stroke-width="2.5"/><path d="M28 10l18 18-18 18-18-18z" fill="none" stroke="#1a1a1a" stroke-width="1.2"/><text x="28" y="36" text-anchor="middle" font-family="Barlow,Arial,sans-serif" font-weight="800" font-size="22" fill="#1a1a1a">$</text></svg>`,
   car:`<svg viewBox="0 0 72 40" aria-hidden="true"><path d="M4 27c0-5 3-8 8-9l8-9c2-2 4-3 7-3h16c3 0 5 1 7 3l7 9c6 1 11 3 11 9v4H4z" fill="#d2232f" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/><path d="M22 18l6-8h7v8zM39 10h6l6 8H39z" fill="#cfe6d1" stroke="#1a1a1a" stroke-width="2" stroke-linejoin="round"/><circle cx="18" cy="32" r="6" fill="#1a1a1a"/><circle cx="54" cy="32" r="6" fill="#1a1a1a"/><circle cx="18" cy="32" r="2.4" fill="#bdbdbd"/><circle cx="54" cy="32" r="2.4" fill="#bdbdbd"/><path d="M63 22h4" stroke="#ffe14d" stroke-width="3" stroke-linecap="round"/></svg>`,
   cop:`<svg viewBox="0 0 64 60" aria-hidden="true"><circle cx="32" cy="36" r="14" fill="#f2c9a0" stroke="#1a1a1a" stroke-width="2.5"/><circle cx="27" cy="36" r="1.8" fill="#1a1a1a"/><circle cx="37" cy="36" r="1.8" fill="#1a1a1a"/><path d="M26 44c4-2 8-2 12 0" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/><path d="M10 24c4-13 13-19 22-19s18 6 22 19z" fill="#24427a" stroke="#1a1a1a" stroke-width="2.5" stroke-linejoin="round"/><path d="M8 24h48v6H8z" fill="#1a1a1a"/><path d="M32 9l5 4-2 6h-6l-2-6z" fill="#e5b522" stroke="#1a1a1a" stroke-width="1.5"/><path d="M48 46l14-8" stroke="#1a1a1a" stroke-width="5" stroke-linecap="round"/><path d="M48 46l14-8" stroke="#24427a" stroke-width="2.5" stroke-linecap="round"/></svg>`,
 };
@@ -945,30 +963,61 @@ function sideReason(s,p,side){
   return null;
 }
 
-/* ================= Networking: the host's browser runs the game, friends connect peer-to-peer ================= */
-// Uses the free public PeerJS service to find each other; game data then flows directly between browsers.
+/* ================= Networking: the host's browser runs the game, friends connect to it ================= */
+// Players first try a direct browser-to-browser link (PeerJS). When a network blocks that (common on mobile
+// data and strict routers), moves travel through a public MQTT message relay over a normal secure web
+// connection instead. The host always listens on both, so it works whichever side has the strict network.
 const PEER_PREFIX = 'grandtourtycoon-v1-';
+const RELAY_URL = 'wss://broker.emqx.io:8084/mqtt';
+const DIRECT_WAIT = 6000;
+const FORCE_RELAY = /[?&]relay=1\b/.test(location.search);
+const directOK = () => typeof Peer==='function' && !app.noRTC && !FORCE_RELAY;
+const relayOK = () => typeof mqtt!=='undefined' && !!(window.crypto && crypto.subtle);
 const recent = {
   list(){ try{ return JSON.parse(lsGet('gtt:recent')||'[]'); }catch(e){ return []; } },
   add(code,host){ const l=recent.list().filter(r=>r.code!==code); l.unshift({code,host,at:Date.now()}); lsSet('gtt:recent',JSON.stringify(l.slice(0,8))); },
 };
+// Relay channels are named after a hash of the room code, so the code itself never appears on the relay.
+async function relayBase(code){
+  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('grandtourtycoon-v1:'+code));
+  return 'gtt1/'+[...new Uint8Array(h)].slice(0,16).map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+class RelayLink{
+  constructor(code,listen,onMsg,onChange){ this.code=code; this.listen=listen; this.onMsg=onMsg; this.onChange=onChange; this.up=false; this.start(); }
+  async start(){
+    if(!relayOK()) return;
+    try{ this.base=await relayBase(this.code); }catch(e){ return; }
+    if(this.closed) return;
+    const c=this.client=mqtt.connect(RELAY_URL,{reconnectPeriod:3000,connectTimeout:10000,clean:true,keepalive:30});
+    c.on('connect',()=>{ c.subscribe(this.base+'/'+this.listen,{qos:0}); this.up=true; this.onChange&&this.onChange(true); });
+    c.on('close',()=>{ if(this.up){ this.up=false; this.onChange&&this.onChange(false); } });
+    c.on('error',()=>{});
+    c.on('message',(topic,buf)=>{ let m; try{ m=JSON.parse(new TextDecoder().decode(buf)); }catch(e){ return; } if(m && typeof m==='object') this.onMsg(m); });
+  }
+  send(to,m){ try{ if(this.client && this.up) this.client.publish(this.base+'/'+to,JSON.stringify(m),{qos:0}); }catch(e){} }
+  close(){ this.closed=true; try{ this.client && this.client.end(true); }catch(e){} }
+}
 class HostGame{
   constructor(code){
     this.code=code; this.key='gtt:host:'+code; this.subs=new Set(); this.chatSubs=new Set(); this.conns=new Set(); this.status='connecting';
     let saved=null; try{ saved=JSON.parse(lsGet(this.key)||'null'); }catch(e){}
     this.state=saved?.state||null; this.chat=saved?.chat||{msgs:[]};
-    this.connect();
+    this.relayGuests=new Map();
+    this.relay=new RelayLink(code,'host',m=>this.onRelay(m),()=>this.upd());
+    this.beat=setInterval(()=>this.heartbeat(),10000);
+    if(directOK()) this.connect();
   }
+  upd(){ const s=(this.peer && this.peer.open) || this.relay.up ? 'live' : this.peerFailed ? 'offline' : 'connecting'; if(s!==this.status){ this.status=s; render(); } }
   connect(){
     if(this.closed) return;
     const peer=this.peer=new Peer(PEER_PREFIX+this.code,{debug:0});
-    peer.on('open',()=>{ this.status='live'; render(); });
+    peer.on('open',()=>{ this.peerFailed=false; this.upd(); });
     peer.on('connection',conn=>this.accept(conn));
-    peer.on('disconnected',()=>{ if(!this.closed && !peer.destroyed) try{ peer.reconnect(); }catch(e){} });
+    peer.on('disconnected',()=>{ if(!this.closed && !peer.destroyed) try{ peer.reconnect(); }catch(e){} this.upd(); });
     peer.on('error',e=>{
       if(this.closed || ['peer-unavailable'].includes(e.type)) return;
       // The room id can stay reserved for a few seconds after a reload; keep trying.
-      this.status='offline'; render(); try{ peer.destroy(); }catch(_){}
+      this.peerFailed=true; try{ peer.destroy(); }catch(_){} this.upd();
       clearTimeout(this.retry); this.retry=setTimeout(()=>this.connect(),3000);
     });
   }
@@ -978,6 +1027,17 @@ class HostGame{
     conn.on('open',()=>{ this.conns.add(conn); conn.send({t:'state',s:this.state}); conn.send({t:'chat',c:this.chat}); });
     conn.on('data',m=>this.onMessage(conn,m));
     const drop=()=>this.conns.delete(conn); conn.on('close',drop); conn.on('error',drop);
+  }
+  onRelay(m){
+    if(!m.uid) return;
+    const uid=String(m.uid).slice(0,48); this.relayGuests.set(uid,Date.now());
+    const conn={uid,send:x=>this.relay.send('all',{...x,to:uid})};
+    if(m.t==='hello'){ conn.send({t:'state',s:this.state}); conn.send({t:'chat',c:this.chat}); }
+    else this.onMessage(conn,m);
+  }
+  heartbeat(){
+    const now=Date.now(); for(const [uid,t] of this.relayGuests) if(now-t>45000) this.relayGuests.delete(uid);
+    if(this.relayGuests.size) this.relay.send('all',{t:'ping'});
   }
   onMessage(conn,m){
     if(!m || typeof m!=='object') return;
@@ -1003,21 +1063,38 @@ class HostGame{
     this.chat.msgs.push({id:uid,t:Date.now(),m:text}); if(this.chat.msgs.length>80) this.chat.msgs.splice(0,this.chat.msgs.length-80);
     this.save(); this.broadcast({t:'chat',c:this.chat}); this.chatSubs.forEach(cb=>cb(this.chat));
   }
-  broadcast(m){ for(const c of this.conns){ try{ if(c.open) c.send(m); }catch(e){} } }
+  broadcast(m){
+    for(const c of this.conns){ try{ if(c.open) c.send(m); }catch(e){} }
+    if(this.relayGuests.size) this.relay.send('all',m);
+  }
   save(){ lsSet(this.key,JSON.stringify({state:this.state,chat:this.chat})); }
   subscribe(cb){ this.subs.add(cb); setTimeout(()=>cb(this.state,{fromCache:false}),0); return ()=>this.subs.delete(cb); }
   subscribeChat(cb){ this.chatSubs.add(cb); setTimeout(()=>cb(this.chat),0); return ()=>this.chatSubs.delete(cb); }
   async mutate(fn){ return this.apply(fn); }
   async sendChat(text){ this.addChat(app.myId,text); }
-  close(){ this.closed=true; clearTimeout(this.retry); try{ this.peer.destroy(); }catch(e){} }
+  get viaRelay(){ return false; }
+  close(){ this.closed=true; clearTimeout(this.retry); clearInterval(this.beat); this.relay.close(); try{ this.peer && this.peer.destroy(); }catch(e){} }
 }
 class GuestGame{
-  constructor(code){ this.code=code; this.subs=new Set(); this.chatSubs=new Set(); this.pending=new Map(); this.rid=0; this.tries=0; this.status='connecting'; this.connect(); }
+  constructor(code){
+    this.code=code; this.subs=new Set(); this.chatSubs=new Set(); this.pending=new Map(); this.rid=0; this.tries=0; this.status='connecting';
+    this.relayed=false; this.relayLast=0; this.ticks=0;
+    this.watch=setInterval(()=>this.tick(),3000);
+    if(directOK()){ this.connect(); this.fallback=setTimeout(()=>this.useRelay(),DIRECT_WAIT); }
+    else this.useRelay();
+  }
+  get directOpen(){ return !!(this.conn && this.conn.open); }
+  get viaRelay(){ return this.relayed && !this.directOpen; }
+  upd(){
+    const s=this.directOpen || this.relayed ? 'live' : this.notFound && !this.everLive ? 'not-found' : this.everLive ? 'host-away' : 'connecting';
+    if(s==='live') this.everLive=true;
+    if(s!==this.status){ this.status=s; render(); }
+  }
   connect(){
-    if(this.closed) return;
+    if(this.closed || !directOK()) return;
     const start=()=>{
       const conn=this.conn=this.peer.connect(PEER_PREFIX+this.code,{reliable:true,serialization:'json',metadata:{uid:app.myId}});
-      conn.on('open',()=>{ this.status='live'; this.tries=0; render(); });
+      conn.on('open',()=>{ this.tries=0; this.upd(); });
       conn.on('data',m=>this.onMessage(m));
       conn.on('close',()=>this.lost());
       conn.on('error',()=>this.lost());
@@ -1028,34 +1105,61 @@ class GuestGame{
     this.peer.on('open',start);
     this.peer.on('error',e=>{
       if(this.closed) return;
-      if(e.type==='peer-unavailable' && this.state===undefined){ this.status='not-found'; this.subs.forEach(cb=>cb(null,{fromCache:false})); }
+      if(e.type==='peer-unavailable' && this.state===undefined){ this.notFound=true; this.useRelay(); this.upd(); if(!this.relayed) this.subs.forEach(cb=>cb(null,{fromCache:false})); }
       this.lost();
     });
   }
+  // Fall back to the relay when the direct link doesn't open.
+  useRelay(){
+    if(this.relay || this.closed || !relayOK()) return;
+    this.relay=new RelayLink(this.code,'all',m=>this.onRelay(m),up=>{ if(up) this.hello(); });
+  }
+  hello(){ if(this.relay) this.relay.send('host',{t:'hello',uid:app.myId}); }
+  onRelay(m){
+    if(m.to && m.to!==app.myId) return;
+    this.relayLast=Date.now();
+    if(!this.relayed){ this.relayed=true; this.upd(); }
+    this.onMessage(m);
+  }
+  tick(){
+    if(!this.relay) return;
+    if(++this.ticks%3===0 || !this.relayed) this.hello();
+    if(this.relayed && Date.now()-this.relayLast>25000){ this.relayed=false; this.upd(); }
+  }
   lost(){
-    if(this.closed || this.retry) return;
-    if(this.status==='live') this.status='host-away';
-    this.pending.forEach(p=>{ clearTimeout(p.timer); p.reject({message:'Lost the connection to the host. Reconnecting…'}); }); this.pending.clear();
-    render();
+    if(this.closed) return;
+    if(!this.relayed){ this.pending.forEach(p=>{ clearTimeout(p.timer); p.reject({message:'Lost the connection to the host. Reconnecting…'}); }); this.pending.clear(); }
+    this.useRelay(); this.upd();
+    if(this.retry || !directOK()) return;
     this.tries++; this.retry=setTimeout(()=>{ this.retry=null; this.connect(); },Math.min(8000,1200+this.tries*800));
   }
   onMessage(m){
     if(!m || typeof m!=='object') return;
-    if(m.t==='state'){ this.state=m.s; this.subs.forEach(cb=>cb(m.s,{fromCache:false})); }
+    if(m.t==='state'){
+      // The same update can arrive by both routes; never step back to an older one.
+      if(this.state && m.s && this.state.code===m.s.code && (m.s.seq||0)<(this.state.seq||0)) return;
+      this.state=m.s; this.subs.forEach(cb=>cb(m.s,{fromCache:false}));
+    }
     else if(m.t==='chat'){ this.chat=m.c; this.chatSubs.forEach(cb=>cb(m.c)); }
     else if(m.t==='ack'){ const p=this.pending.get(m.rid); if(p){ this.pending.delete(m.rid); clearTimeout(p.timer); m.err?p.reject({message:m.err}):p.resolve(true); } }
   }
+  send(m){
+    if(this.directOpen){ this.conn.send(m); return true; }
+    if(this.relayed){ this.relay.send('host',{...m,uid:app.myId}); return true; }
+    return false;
+  }
   action(name,args){
     return new Promise((resolve,reject)=>{
-      if(!this.conn || !this.conn.open) return reject({message:'Not connected to the host yet. Try again in a moment.'});
-      const rid=++this.rid, timer=setTimeout(()=>{ this.pending.delete(rid); reject({message:'The host didn’t answer. Try again.'}); },10000);
-      this.pending.set(rid,{resolve,reject,timer}); this.conn.send({t:'act',rid,name,args});
+      const rid=++this.rid;
+      if(!this.send({t:'act',rid,name,args})) return reject({message:'Not connected to the host yet. Try again in a moment.'});
+      const timer=setTimeout(()=>{ this.pending.delete(rid); reject({message:'The host didn’t answer. Try again.'}); },10000);
+      this.pending.set(rid,{resolve,reject,timer});
     });
   }
   subscribe(cb){ this.subs.add(cb); if(this.state!==undefined) setTimeout(()=>cb(this.state,{fromCache:false}),0); return ()=>this.subs.delete(cb); }
   subscribeChat(cb){ this.chatSubs.add(cb); if(this.chat) setTimeout(()=>cb(this.chat),0); return ()=>this.chatSubs.delete(cb); }
-  async sendChat(text){ if(!this.conn || !this.conn.open) fail('Not connected to the host.'); this.conn.send({t:'chat',text}); }
-  close(){ this.closed=true; clearTimeout(this.retry); try{ this.peer.destroy(); }catch(e){} }
+  async sendChat(text){ if(!this.send({t:'chat',text})) fail('Not connected to the host.'); }
+  close(){ this.closed=true; clearTimeout(this.retry); clearTimeout(this.fallback); clearInterval(this.watch); if(this.relay) this.relay.close(); try{ this.peer && this.peer.destroy(); }catch(e){} }
 }
 class LocalGame{
   constructor(code){ this.key='gtt:local:'+code; this.subs=new Set(); try{ this.state=JSON.parse(lsGet(this.key)||'null'); }catch(e){ this.state=null; } }
@@ -1082,7 +1186,9 @@ async function init(){
   readHash();
   app.myId=lsGet('gtt:uid');
   if(!app.myId){ app.myId='u'+Math.random().toString(36).slice(2,12)+Date.now().toString(36); lsSet('gtt:uid',app.myId); }
-  app.online=typeof Peer==='function'?'on':'off';
+  // Online play needs direct browser-to-browser connections; some in-app browsers don't allow them.
+  app.noRTC=!(window.RTCPeerConnection||window.webkitRTCPeerConnection);
+  app.online=(typeof Peer==='function' && !app.noRTC) || relayOK()?'on':'off';
   render();
   if(app.online==='on' && ui.joinCode){ ui.autoJoin=ui.joinCode; openGame(ui.joinCode,false); }
 }
@@ -1092,7 +1198,7 @@ window.addEventListener('hashchange',()=>{
   if(app.online==='on' && ui.joinCode && ui.joinCode!==app.code){ ui.autoJoin=ui.joinCode; openGame(ui.joinCode,false); }
 });
 function setHash(code){ try{ history.replaceState(null,'',code?'#'+code:location.pathname+location.search); }catch(e){} }
-function closeGame(){ try{ app.game && app.game.close && app.game.close(); }catch(e){} app.unsubs.forEach(u=>{ try{u();}catch(e){} }); app.unsubs=[]; clearTimeout(app.loadTimer); app.s=null; app.chat=null; app.game=null; app.code=null; app.missing=false; app.slow=false; }
+function closeGame(){ keepAwake(false); try{ app.game && app.game.close && app.game.close(); }catch(e){} app.unsubs.forEach(u=>{ try{u();}catch(e){} }); app.unsubs=[]; clearTimeout(app.loadTimer); app.s=null; app.chat=null; app.game=null; app.code=null; app.missing=false; app.slow=false; }
 function openGame(code,local){
   closeGame(); code=code.toUpperCase();
   app.code=code; app.view='game';
@@ -1180,8 +1286,10 @@ const PIPS={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
 // Cube orientation that brings each face to the front (opposite faces add up to 7).
 const FACE_TO={1:'rotateX(0deg) rotateY(0deg)',2:'rotateX(-90deg) rotateY(0deg)',3:'rotateX(0deg) rotateY(-90deg)',4:'rotateX(0deg) rotateY(90deg)',5:'rotateX(90deg) rotateY(0deg)',6:'rotateX(0deg) rotateY(180deg)'};
 const pipsHTML = v => [1,2,3,4,5,6,7,8,9].map(k=>`<i${PIPS[v].includes(k)?' class="on"':''}></i>`).join('');
-const dieHTML = v => `<div class="die3" role="img" aria-label="${v}"><div class="cube" style="--to:${FACE_TO[v]}">${[1,2,3,4,5,6].map(f=>`<div class="f f${f}">${pipsHTML(f)}</div>`).join('')}</div></div>`;
-const diceHTML = () => { const f=ui.rolling?ui.faces:(app.s?.dice||[3,4]); const landed=!ui.rolling && Date.now()-(ui.diceLanded||0)<550; return `<div class="dice${ui.rolling?' rolling':landed?' landed':''}" id="dice">${dieHTML(f[0])}${dieHTML(f[1])}</div>`; };
+const dieHTML = (v,rolling) => rolling
+  ? `<div class="die3" role="img" aria-label="Rolling"><div class="cube" style="--to:${FACE_TO[v]}">${[1,2,3,4,5,6].map(f=>`<div class="f f${f}">${pipsHTML(f)}</div>`).join('')}</div></div>`
+  : `<div class="die3" role="img" aria-label="${v}"><div class="f flat${v===1?' one':''}">${pipsHTML(v)}</div></div>`;
+const diceHTML = () => { const f=ui.rolling?ui.faces:(app.s?.dice||[3,4]); const landed=!ui.rolling && Date.now()-(ui.diceLanded||0)<550; return `<div class="dice${ui.rolling?' rolling':landed?' landed':''}" id="dice">${dieHTML(f[0],ui.rolling)}${dieHTML(f[1],ui.rolling)}</div>`; };
 const tokenHTML = (p,cls='') => `<span class="tok ${cls}" style="--pc:${p.color}" title="${esc(p.name)}"><i class="em">${p.token}</i></span>`;
 function cellRC(i){ if(i<=10) return [11,11-i]; if(i<=20) return [11-(i-10),1]; if(i<=30) return [1,1+(i-20)]; return [1+(i-30),11]; }
 const sideOf = i => i%10===0?'corner':i<10?'bottom':i<20?'left':i<30?'top':'right';
@@ -1518,10 +1626,10 @@ function homeHTML(){
       <div class="panel stack">
         <h2>Play online</h2>
         
-        ${off?'<div class="note">Online play couldn\u2019t load. Check your connection and reload the page. You can still play pass-and-play on this device below.</div>':''}
+        ${off?(app.noRTC?'<div class="note"><b>This browser can\u2019t play online.</b> Open this link in Safari or Chrome instead. In an app like Instagram or Messenger, tap the \u2022\u2022\u2022 menu and choose Open in browser. You can still play pass-and-play below.</div>':'<div class="note"><b>Online play couldn\u2019t load.</b> Check your connection and reload. If you use an ad blocker, allow this site: in Safari tap <b>aA</b> \u2192 <b>Turn off Content Blockers</b>, then reload. You can still play pass-and-play below.</div>'):''}
         <div class="row">${B('create','Create a game','primary','',!online)}</div>
         <p class="fine">Create a game, then send friends the invite link, QR code or room code. No account needed.</p>
-        <label class="field" for="codeInput">Join with a room code or invite link<div class="row" style="flex-wrap:nowrap"><input type="text" id="codeInput" data-bind="joinCode" maxlength="400" placeholder="ABCD or paste a link" value="${esc(ui.joinCode)}" style="text-transform:uppercase;font-family:var(--f-mono);letter-spacing:.2em" autocomplete="off">${B('joinCode','Join','','',!online)}</div></label>
+        <label class="field" for="codeInput">Join with a room code or invite link<div class="row" style="flex-wrap:nowrap"><input type="text" id="codeInput" autocapitalize="characters" autocorrect="off" spellcheck="false" data-bind="joinCode" maxlength="400" placeholder="ABCD or paste a link" value="${esc(ui.joinCode)}" style="text-transform:uppercase;font-family:var(--f-mono);letter-spacing:.2em" autocomplete="off">${B('joinCode','Join','','',!online)}</div></label>
       </div>
       <div class="panel stack">
         <h2>Play on this device</h2>
@@ -1538,7 +1646,7 @@ function recentHTML(){
 function netChip(){
   const g=app.game; if(!g || isLocal() || !g.status) return '';
   if(g instanceof HostGame) return g.status==='live'?'<span class="chip">Hosting · keep this tab open</span>':'<span class="chip warn">Connecting to the game network\u2026</span>';
-  return g.status==='live'?'':g.status==='host-away'?'<span class="chip warn">Host offline · reconnecting\u2026</span>':'<span class="chip warn">Connecting\u2026</span>';
+  return g.status==='live'?(g.viaRelay?'<span class="chip" title="Your network blocks direct links, so moves go through a relay.">Connected via relay</span>':''):g.status==='host-away'?'<span class="chip warn">Host offline · reconnecting\u2026</span>':'<span class="chip warn">Connecting\u2026</span>';
 }
 function inviteText(s){ return SHAREABLE?`${SITE_URL}#${s.code}`:`Room code ${s.code}`; }
 function inviteMsg(s){ return `Join my Grand Tour Tycoon game! ${SHAREABLE?`Tap ${inviteText(s)} to join, or open ${SITE_URL} and enter`:'Enter'} room code ${s.code}. No account needed.`; }
@@ -1677,10 +1785,10 @@ function tradeModal(s){
       ${g?`<span class="swatch" style="background:${GC[g]}"></span>`:`<span class="ico-s">${ICON[SPACES[i].ic]}</span>`} <span>${esc(SPACES[i].n)} <span class="fine">${money(SPACES[i].p)}</span>${s.owned[i].mortgaged?' <span class="fine">(mortgaged)</span>':''}${blk?` <span class="fine">· ${blk}</span>`:''}${tag}</span></label>`; }).join('')}</div>`; };
   const quick=key=>`<div class="row quick">${[10,50,100].map(n=>`<button type="button" class="btn sm ghost" data-act="tcashAdd" data-key="${key}" data-amt="${n}">+$${n}</button>`).join('')}<button type="button" class="btn sm ghost" data-act="tcashAdd" data-key="${key}" data-amt="0">Clear</button></div>`;
   const col=(p,side,key,label,receiver)=>`<div class="stack"><div class="eyebrow">${label}</div>
-    <label class="field" for="tc-${key}">Cash (has ${money(p.cash)})<input type="number" id="tc-${key}" min="0" max="${p.cash}" step="10" data-tcash="${key}" value="${side.cash||''}" placeholder="0"></label>
+    <label class="field" for="tc-${key}">Cash (has ${money(p.cash)})<input type="number" inputmode="numeric" pattern="[0-9]*" id="tc-${key}" min="0" max="${p.cash}" step="10" data-tcash="${key}" value="${side.cash||''}" placeholder="0"></label>
     ${quick(key)}
     ${pickList(p,side,key,receiver)}
-    ${p.jailCards.length?`<label class="field" for="tj-${key}">Get Out of Jail Free cards (has ${p.jailCards.length})<input type="number" id="tj-${key}" min="0" max="${p.jailCards.length}" data-tcards="${key}" value="${side.cards||''}" placeholder="0"></label>`:''}</div>`;
+    ${p.jailCards.length?`<label class="field" for="tj-${key}">Get Out of Jail Free cards (has ${p.jailCards.length})<input type="number" inputmode="numeric" pattern="[0-9]*" id="tj-${key}" min="0" max="${p.jailCards.length}" data-tcards="${key}" value="${side.cards||''}" placeholder="0"></label>`:''}</div>`;
   const you=isLocal()?esc(me.name):'You', youGive=isLocal()?`${esc(me.name)} gives`:'You give';
   let summary='', canSend=false;
   if(them){
@@ -1767,7 +1875,22 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter' && e.target.id==='codeInput'){ e.preventDefault(); clickAct('joinCode'); }
   if(e.key==='Enter' && e.target.id==='localName'){ e.preventDefault(); clickAct('addLocal'); }
 });
-document.addEventListener('pointerdown',()=>Sfx.wake(),{passive:true});
+document.addEventListener('pointerdown',()=>{ Sfx.wake(); if(app.view==='game' && app.s && app.s.status==='playing') keepAwake(true); },{passive:true});
+let wakeLock=null;
+async function keepAwake(on){
+  try{
+    if(on && !wakeLock && navigator.wakeLock && document.visibilityState==='visible'){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{ wakeLock=null; }); }
+    else if(!on && wakeLock){ const w=wakeLock; wakeLock=null; await w.release(); }
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible') return;
+  const g=app.game;
+  if(app.view==='game' && app.s && app.s.status==='playing') keepAwake(true);
+  // Phones pause pages in the background; reconnect now instead of waiting for the next retry.
+  if(g instanceof GuestGame && g.status!=='live' && !g.closed){ clearTimeout(g.retry); g.retry=null; g.tries=0; g.connect(); g.hello(); }
+  if(g instanceof HostGame && g.peer && !g.closed){ if(g.peer.destroyed){ clearTimeout(g.retry); g.connect(); } else if(g.peer.disconnected){ try{ g.peer.reconnect(); }catch(e){} } }
+});
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act]'); if(!el) return;
   const a=el.dataset.act;
