@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>if("serviceWorker"in navigator&&location.protocol==="https:")addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})</script>
 <script>/* an old link with no room code opens the games hub once per visit */(function(){try{var n=performance.getEntriesByType("navigation")[0];if(location.pathname==="/"||location.hash||location.search||(n&&n.type!=="navigate")||matchMedia("(display-mode: standalone)").matches||navigator.standalone||sessionStorage.getItem("hub-seen")||(document.referrer&&new URL(document.referrer).origin===location.origin))return;location.replace("/?from=tycoon")}catch(e){}})()</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="Grand Tour Tycoon: a live property-trading board game for 2 to 8 players. Buy property, build hotels and bankrupt your friends.">
